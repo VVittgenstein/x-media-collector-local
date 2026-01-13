@@ -70,7 +70,7 @@
       ],
       "lane": "now",
       "priority_suggested": "P0",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-001-arch-task-model"
       ],
@@ -91,8 +91,8 @@
         "EVID-002"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T11:20:35Z",
+      "owner": "codex",
       "tags": [
         "design",
         "security"
