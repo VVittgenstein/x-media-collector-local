@@ -816,23 +816,23 @@
       "completion_notes": "实现并落地 Ignore+Replace（ADR-0004）到 Start New：1) 前端 Start New 弹窗选项透传 `start_mode` 到 `/api/scheduler/start` 并存入 Run；2) Runner 按 `start_mode=ignore_replace` 选择 Replace 路径，预扫描历史文件构建 hash->path 映射；3) Downloader 按内容 hash 去重（同 run newest-first first-wins），写入采用临时文件 + `os.replace` 原子落盘，且仅在新文件写入成功后删除历史同 hash 文件（删除失败仅 warning 不阻塞）；4) 新增单测覆盖 ADR 场景 1/2/4，`python3 -m unittest discover -s tests` 全部通过。"
     },
 
-    "T-20260113-design-min-short-side-filter-approach": {
-      "order": "18/21",
-      "seed_id": "",
-      "title": "[已拍板] MIN_SHORT_SIDE 自适应策略：有元数据则前置过滤，否则下载后删除",
-      "type": "design",
-      "summary": "[已决策] 采用自适应策略：JSON 有可靠 width/height 则下载前过滤；否则先下载再判断，低于阈值则删除。[D-20260113-min-short-side-adaptive]",
+	    "T-20260113-design-min-short-side-filter-approach": {
+	      "order": "18/21",
+	      "seed_id": "",
+	      "title": "[已拍板] MIN_SHORT_SIDE 自适应策略：有元数据则前置过滤，否则下载后删除",
+	      "type": "design",
+	      "summary": "[已决策] 采用自适应策略：JSON 有可靠 width/height 则下载前过滤；否则先下载再判断，低于阈值则删除。[D-20260113-min-short-side-adaptive]",
       "acceptance_draft": [
         "基于 Spike 的真实 JSON 样本，确认图片/视频是否稳定提供 width/height 或可推导分辨率",
         "[已拍板] 自适应策略：有 width/height 则下载前过滤；否则下载后判断删除",
         "补充 1 条用户可理解的 UI/文档说明文案（解释可能的带宽浪费）"
       ],
-      "lane": "next",
-      "priority_suggested": "P1",
-      "status": "todo",
-      "dependencies": [
-        "T-20260113-act-002-spike-cookie-scrape"
-      ],
+	      "lane": "next",
+	      "priority_suggested": "P1",
+	      "status": "done",
+	      "dependencies": [
+	        "T-20260113-act-002-spike-cookie-scrape"
+	      ],
       "blocked": false,
       "blocked_by": [],
       "unblock_plan": "",
@@ -849,13 +849,13 @@
         "EVID-001",
         "EVID-002"
       ],
-      "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
-      "tags": [
-        "design"
-      ]
-    },
+	      "created_at": "2026-01-13T04:51:26Z",
+	      "updated_at": "2026-01-13T20:46:53Z",
+	      "owner": "codex",
+	      "tags": [
+	        "design"
+	      ]
+	    },
 
     "T-20260113-act-010-stats-open-folder": {
       "order": "19/21",
