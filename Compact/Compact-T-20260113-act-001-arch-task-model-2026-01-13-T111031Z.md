@@ -53,6 +53,13 @@ If the initial `/api/settings` request returns non-2xx (or throws), `load()` ret
 Each run unconditionally calls `api.pool.add_account` with the same default username (`xmc_cookie`). When using a persistent `--accounts-db`, rerunning the script raises a duplicate-username constraint error and aborts scraping despite valid credentials. Check for an existing account or update/replace it instead of blindly inserting.
 ---review-end---
 
+## Code Review - T-20260113-test-url-validation - 2026-01-13T14:50:00Z
+
+---review-start---
+[P2] Reject empty query strings on x.com URLs  
+`validate_x_url` only rejects when `parsed.query` is non-empty, so `https://x.com/user?` is treated as valid even though the contract forbids any query params; this leaves malformed URLs accepted by both client and server validation paths.
+---review-end---
+
 ## Code Review Follow-ups（处理进展）
 
 - [DONE] [P1] Render settings UI when initial fetch fails（已修复：`GlobalSettingsPanel.load()` 在 non-2xx/exception 时会设置错误 banner 并调用 `_render()` 渲染默认表单；见 `src/frontend/settings/GlobalSettings.js`）。

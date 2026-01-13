@@ -103,8 +103,8 @@ def validate_x_url(url: str) -> ValidationResult:
             error=f"域名必须是 x.com（当前为 {parsed.netloc}）"
         )
 
-    # 检查 query 参数（不允许）
-    if parsed.query:
+    # 检查 query 参数（不允许，包括空 query 即尾部 ?）
+    if parsed.query or "?" in url:
         return ValidationResult(
             valid=False,
             error="URL 不能包含查询参数（? 后的内容）"

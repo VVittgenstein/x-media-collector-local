@@ -132,10 +132,11 @@
         "EVID-001"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T11:31:34Z",
+      "updated_at": "2026-01-13T14:45:00Z",
       "owner": "codex",
       "tags": [
-        "seed:ACT-003"
+        "seed:ACT-003",
+        "review-fix"
       ]
     },
 
@@ -292,7 +293,7 @@
       ],
       "lane": "now",
       "priority_suggested": "P1",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-003-url-validate-handle"
       ],
@@ -304,16 +305,18 @@
         "tests/validation"
       ],
       "artifacts": [
-        "tests/validators/x_handle_url.test.*"
+        "tests/validators/__init__.py",
+        "tests/validators/test_x_handle_url.py"
       ],
       "citations": [
         "EVID-001"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T14:45:00Z",
+      "owner": "codex",
       "tags": [
-        "test"
+        "test",
+        "review-fix"
       ]
     },
 
