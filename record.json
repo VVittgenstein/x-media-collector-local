@@ -384,7 +384,7 @@
       ],
       "lane": "now",
       "priority_suggested": "P0",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-003-url-validate-handle",
         "T-20260113-act-004-global-settings"
@@ -399,17 +399,29 @@
         "lock-state"
       ],
       "artifacts": [
-        "src/frontend/components/AccountRow.*",
-        "src/frontend/state/configClipboard.*"
+        "src/frontend/components/AccountRowConfig.js",
+        "src/frontend/components/AccountRowConfig.css",
+        "src/frontend/state/ConfigClipboard.js",
+        "src/frontend/app.js (updated AccountRow)"
       ],
       "citations": [
         "EVID-001"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T17:30:00Z",
+      "owner": "codex",
       "tags": [
         "seed:ACT-005"
+      ],
+      "code_review_fixes": [
+        {
+          "issue": "[P2] Status pill not updated for finished tasks",
+          "fixed_at": "2026-01-13T17:30:00Z",
+          "files_changed": [
+            "src/frontend/app.js",
+            "src/frontend/app.css"
+          ]
+        }
       ]
     },
 
