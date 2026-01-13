@@ -1,4 +1,4 @@
-/* global fetch, AccountRowUrlInput, GlobalSettingsPanel, AccountRowConfig, configClipboard */
+/* global fetch, AccountRowUrlInput, GlobalSettingsPanel, AccountRowConfig, AccountRowStats, configClipboard */
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -58,8 +58,10 @@ class AccountRow {
         if (!isLockedStatus(this._taskStatus) && prevHandle && prevHandle !== result.handle) {
           this._taskStatus = TaskStatus.IDLE;
           this._queuedPosition = null;
+          if (this.statsComponent) this.statsComponent.reset();
         }
         this._updateGating();
+        if (this.statsComponent) this.statsComponent.refresh();
       },
     });
 
@@ -88,6 +90,7 @@ class AccountRow {
 
     // 配置组件容器
     this.configContainer = el("div", { class: "account-config-container" });
+    this.statsContainer = el("div", { class: "account-stats-container" });
 
     this.meta = el("div", { class: "account-meta" });
     this.reasonEl = el("div", { class: "reason" });
@@ -97,11 +100,13 @@ class AccountRow {
 
     this.card.appendChild(row);
     this.card.appendChild(this.configContainer);
+    this.card.appendChild(this.statsContainer);
     this.card.appendChild(this.meta);
     this.container.appendChild(this.card);
 
     // 初始化配置组件
     this._initConfigComponent();
+    this._initStatsComponent();
     this._updateGating();
   }
 
@@ -128,6 +133,13 @@ class AccountRow {
     // 订阅剪贴板变化，更新 Paste 按钮状态
     this._unsubscribeClipboard = configClipboard.subscribe(() => {
       this.configComponent.refreshPasteAvailability();
+    });
+  }
+
+  _initStatsComponent() {
+    this.statsComponent = new AccountRowStats(this.statsContainer, {
+      getSettings: () => this.getSettings(),
+      getHandle: () => this.getHandle(),
     });
   }
 
@@ -367,6 +379,7 @@ class AccountRow {
     if (!state || state.handle !== this._validation.handle) return;
     this._queuedPosition = state.queued_position ?? null;
     this.setTaskStatus(state.status);
+    if (this.statsComponent) this.statsComponent.applyBackendState(state);
   }
 
   /**
@@ -436,6 +449,8 @@ class AccountRow {
     if (this.urlInput) {
       this.urlInput.setDisabled(isLocked);
     }
+
+    if (this.statsComponent) this.statsComponent.refresh();
   }
 
   async _readError(res) {

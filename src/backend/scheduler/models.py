@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -29,6 +29,9 @@ class Run:
     updated_at: datetime
     start_mode: Optional[StartMode] = None
     error: Optional[str] = None
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    download_stats: dict[str, Any] = field(default_factory=dict)
 
     def to_public_dict(self) -> dict[str, Any]:
         return {
@@ -38,7 +41,10 @@ class Run:
             "status": self.status.value,
             "created_at": format_utc_z(self.created_at),
             "updated_at": format_utc_z(self.updated_at),
+            "started_at": format_utc_z(self.started_at) if self.started_at is not None else None,
+            "finished_at": format_utc_z(self.finished_at) if self.finished_at is not None else None,
             "start_mode": self.start_mode.value if self.start_mode is not None else None,
             "error": self.error,
             "account_config": self.account_config,
+            "download_stats": dict(self.download_stats or {}),
         }

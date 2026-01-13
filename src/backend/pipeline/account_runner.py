@@ -131,6 +131,7 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
         download_func=_download_bytes_with_retries,
         ignore_replace=ignore_replace,
     )
+    run.download_stats = downloader.stats.to_dict()
 
     if ignore_replace:
         # ADR-0004: scan existing files as replace candidates (new run wins).
@@ -153,6 +154,7 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
     results = []
     for intent in media_intents:
         results.append(await asyncio.to_thread(downloader.download, intent))
+        run.download_stats = downloader.stats.to_dict()
 
     failed = [r for r in results if r.status == DownloadStatus.FAILED]
     if failed:

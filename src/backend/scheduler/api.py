@@ -26,6 +26,11 @@ class HandleStateOut(BaseModel):
     status: TaskStatus
     run_id: Optional[str] = None
     queued_position: Optional[int] = None
+    images_downloaded: int = 0
+    videos_downloaded: int = 0
+    skipped_duplicate: int = 0
+    runtime_s: float = 0.0
+    avg_speed: float = 0.0
 
 
 class SchedulerSnapshotOut(BaseModel):
@@ -49,6 +54,11 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
                 status=h["status"],
                 run_id=h.get("run_id"),
                 queued_position=h.get("queued_position"),
+                images_downloaded=h.get("images_downloaded", 0),
+                videos_downloaded=h.get("videos_downloaded", 0),
+                skipped_duplicate=h.get("skipped_duplicate", 0),
+                runtime_s=h.get("runtime_s", 0.0),
+                avg_speed=h.get("avg_speed", 0.0),
             )
             for h in snap["handles"]
         ]
@@ -69,6 +79,11 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
             status=state["status"],
             run_id=state.get("run_id"),
             queued_position=state.get("queued_position"),
+            images_downloaded=state.get("images_downloaded", 0),
+            videos_downloaded=state.get("videos_downloaded", 0),
+            skipped_duplicate=state.get("skipped_duplicate", 0),
+            runtime_s=state.get("runtime_s", 0.0),
+            avg_speed=state.get("avg_speed", 0.0),
         )
 
     @router.post("/start", response_model=HandleStateOut)
@@ -91,6 +106,11 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
             status=state["status"],
             run_id=state.get("run_id"),
             queued_position=state.get("queued_position"),
+            images_downloaded=state.get("images_downloaded", 0),
+            videos_downloaded=state.get("videos_downloaded", 0),
+            skipped_duplicate=state.get("skipped_duplicate", 0),
+            runtime_s=state.get("runtime_s", 0.0),
+            avg_speed=state.get("avg_speed", 0.0),
         )
 
     @router.post("/continue", response_model=HandleStateOut)
@@ -113,6 +133,11 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
             status=state["status"],
             run_id=state.get("run_id"),
             queued_position=state.get("queued_position"),
+            images_downloaded=state.get("images_downloaded", 0),
+            videos_downloaded=state.get("videos_downloaded", 0),
+            skipped_duplicate=state.get("skipped_duplicate", 0),
+            runtime_s=state.get("runtime_s", 0.0),
+            avg_speed=state.get("avg_speed", 0.0),
         )
 
     @router.post("/cancel", response_model=HandleStateOut)
@@ -128,6 +153,11 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
             status=state["status"],
             run_id=state.get("run_id"),
             queued_position=state.get("queued_position"),
+            images_downloaded=state.get("images_downloaded", 0),
+            videos_downloaded=state.get("videos_downloaded", 0),
+            skipped_duplicate=state.get("skipped_duplicate", 0),
+            runtime_s=state.get("runtime_s", 0.0),
+            avg_speed=state.get("avg_speed", 0.0),
         )
 
     return router

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
 from src.backend.lifecycle.models import StartMode
+from src.shared.stats.metrics import compute_avg_speed, compute_runtime_s
 from src.shared.task_status import TaskStatus
 
 from .config import SchedulerConfig
@@ -56,6 +57,7 @@ class Scheduler:
         self._running_tasks: dict[str, asyncio.Task[None]] = {}
         self._runs: dict[str, Run] = {}
         self._active_run_by_handle: dict[str, str] = {}
+        self._last_run_by_handle: dict[str, str] = {}
         self._handle_status: dict[str, TaskStatus] = {}
 
     # ---------------------------------------------------------------------
@@ -98,6 +100,15 @@ class Scheduler:
                 updated_at=now,
                 start_mode=start_mode,
                 error=None,
+                started_at=None,
+                finished_at=None,
+                download_stats={
+                    "images_downloaded": 0,
+                    "videos_downloaded": 0,
+                    "skipped_duplicate": 0,
+                    "failed": 0,
+                    "total_bytes": 0,
+                },
             )
 
             self._runs[run_id] = run
@@ -160,15 +171,37 @@ class Scheduler:
             if run_id and run_id in self._queue:
                 queued_position = self._queue.index(run_id) + 1
 
+            now = utc_now()
+            metrics_run = self._runs.get(run_id) if run_id else None
+            if metrics_run is None:
+                last_run_id = self._last_run_by_handle.get(handle)
+                if last_run_id:
+                    metrics_run = self._runs.get(last_run_id)
+
+            images_downloaded = int((metrics_run.download_stats or {}).get("images_downloaded") or 0) if metrics_run else 0
+            videos_downloaded = int((metrics_run.download_stats or {}).get("videos_downloaded") or 0) if metrics_run else 0
+            skipped_duplicate = int((metrics_run.download_stats or {}).get("skipped_duplicate") or 0) if metrics_run else 0
+
+            runtime_s = 0.0
+            if metrics_run is not None and status != TaskStatus.QUEUED:
+                runtime_s = compute_runtime_s(metrics_run.started_at, metrics_run.finished_at, now=now)
+            avg_speed = compute_avg_speed(images_downloaded, videos_downloaded, skipped_duplicate, runtime_s)
+
             return {
                 "handle": handle,
                 "status": status,
                 "run_id": run_id,
                 "queued_position": queued_position,
+                "images_downloaded": images_downloaded,
+                "videos_downloaded": videos_downloaded,
+                "skipped_duplicate": skipped_duplicate,
+                "runtime_s": runtime_s,
+                "avg_speed": avg_speed,
             }
 
     async def snapshot(self) -> dict[str, Any]:
         async with self._lock:
+            now = utc_now()
             queue_handles = []
             for rid in self._queue:
                 run = self._runs.get(rid)
@@ -189,12 +222,33 @@ class Scheduler:
                 queued_position: Optional[int] = None
                 if run_id and run_id in self._queue:
                     queued_position = self._queue.index(run_id) + 1
+
+                metrics_run = self._runs.get(run_id) if run_id else None
+                if metrics_run is None:
+                    last_run_id = self._last_run_by_handle.get(handle)
+                    if last_run_id:
+                        metrics_run = self._runs.get(last_run_id)
+
+                images_downloaded = int((metrics_run.download_stats or {}).get("images_downloaded") or 0) if metrics_run else 0
+                videos_downloaded = int((metrics_run.download_stats or {}).get("videos_downloaded") or 0) if metrics_run else 0
+                skipped_duplicate = int((metrics_run.download_stats or {}).get("skipped_duplicate") or 0) if metrics_run else 0
+
+                runtime_s = 0.0
+                if metrics_run is not None and status != TaskStatus.QUEUED:
+                    runtime_s = compute_runtime_s(metrics_run.started_at, metrics_run.finished_at, now=now)
+                avg_speed = compute_avg_speed(images_downloaded, videos_downloaded, skipped_duplicate, runtime_s)
+
                 handles.append(
                     {
                         "handle": handle,
                         "status": status,
                         "run_id": run_id,
                         "queued_position": queued_position,
+                        "images_downloaded": images_downloaded,
+                        "videos_downloaded": videos_downloaded,
+                        "skipped_duplicate": skipped_duplicate,
+                        "runtime_s": runtime_s,
+                        "avg_speed": avg_speed,
                     }
                 )
 
@@ -232,8 +286,11 @@ class Scheduler:
         if not run:
             return
 
+        now = utc_now()
         run.status = TaskStatus.RUNNING
-        run.updated_at = utc_now()
+        run.started_at = run.started_at or now
+        run.finished_at = None
+        run.updated_at = now
         self._handle_status[run.handle] = TaskStatus.RUNNING
         self._persist_run(run)
 
@@ -276,14 +333,17 @@ class Scheduler:
                 return
 
             handle = run.handle
+            now = utc_now()
             run.status = final_status
             run.error = error
-            run.updated_at = utc_now()
+            run.finished_at = now
+            run.updated_at = now
             self._persist_run(run)
 
             self._running_tasks.pop(run_id, None)
             if self._active_run_by_handle.get(handle) == run_id:
                 self._active_run_by_handle.pop(handle, None)
             self._handle_status[handle] = final_status
+            self._last_run_by_handle[handle] = run_id
 
             self._try_start_queued_locked()

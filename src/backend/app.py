@@ -13,6 +13,7 @@ from .settings.store import SettingsStore
 from .pipeline.account_runner import create_account_runner
 from .fs import AccountStorageManager
 from .lifecycle.api import create_lifecycle_router
+from .os.api import create_os_router
 
 
 def _repo_root() -> Path:
@@ -41,6 +42,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(create_scheduler_router(scheduler=scheduler))
     app.include_router(create_lifecycle_router(storage=storage))
+    app.include_router(create_os_router(repo_root=repo_root))
 
     app.state.settings_store = store
     app.state.scheduler_config = scheduler_config
