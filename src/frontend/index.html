@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>x-media-collector-local</title>
+    <link rel="stylesheet" href="./app.css" />
+    <link rel="stylesheet" href="./components/AccountRowUrlInput.css" />
+    <link rel="stylesheet" href="./settings/GlobalSettings.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-title">x-media-collector-local</div>
+          <div class="brand-subtitle">本地部署 WebUI（MVP）</div>
+        </div>
+        <div class="topbar-right">
+          <a class="link" href="https://x.com" target="_blank" rel="noreferrer">x.com</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="panel" aria-label="Global Settings">
+        <div class="panel-title">Global Settings</div>
+        <div id="global-settings"></div>
+      </section>
+
+      <section class="panel" aria-label="Accounts">
+        <div class="panel-title">Accounts</div>
+        <div class="panel-subtitle">Start/Continue 在未配置凭证时会被阻止。</div>
+        <div id="accounts"></div>
+      </section>
+    </main>
+
+    <script src="./components/AccountRowUrlInput.js"></script>
+    <script src="./settings/GlobalSettings.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
+

@@ -37,3 +37,9 @@
 - [RISK] 若 UI 复杂度显著上升，可能需要引入 SPA 构建链并调整发布流程（ADR-0001 已提示）。
 - [RISK] 凭证敏感信息的“本地存储/不日志输出/不 UI 明文回显”需要在后续实现中严格落实（本 Subtask 仅在架构层标注约束）。
 
+## Code Review - T-20260113-act-001-arch-task-model - 2026-01-13T12:39:26Z
+
+---review-start---
+[P1] Render settings UI when initial fetch fails  
+If the initial `/api/settings` request returns non-2xx (or throws), `load()` returns without calling `_render`, leaving all settings blocks empty and preventing users from entering credentials or other values. Because the UI never renders any form after the first failure, the user cannot recover (even if the backend comes back) without a full page reload. Consider rendering default fields and showing the error banner so the page remains usable after transient API errors.
+---review-end---
