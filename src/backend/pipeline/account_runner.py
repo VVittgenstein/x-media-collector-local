@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 
 from src.backend.downloader.downloader import DownloadStatus, MediaDownloader, MediaIntent
 from src.backend.fs.storage import AccountStorageManager, MediaType
+from src.backend.lifecycle.models import StartMode
 from src.backend.scheduler.models import Run
 from src.backend.settings.store import SettingsStore
 from src.backend.scraper.twscrape_scraper import DEFAULT_USER_AGENT, TwscrapeMediaScraper
@@ -121,14 +122,22 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
 
     download_root = Path(settings.download_root)
     storage = AccountStorageManager(download_root)
+
+    start_mode = getattr(run, "start_mode", None)
+    ignore_replace = run.kind == "start" and start_mode == StartMode.IGNORE_REPLACE
     downloader = MediaDownloader(
         storage=storage,
         handle=handle,
         download_func=_download_bytes_with_retries,
+        ignore_replace=ignore_replace,
     )
 
-    # Cross-run dedup (first wins) by loading existing files.
-    await asyncio.to_thread(downloader.load_existing_files)
+    if ignore_replace:
+        # ADR-0004: scan existing files as replace candidates (new run wins).
+        await asyncio.to_thread(downloader.load_existing_files_for_replace)
+    else:
+        # Cross-run dedup (first wins) by loading existing files.
+        await asyncio.to_thread(downloader.load_existing_files)
 
     scraper = TwscrapeMediaScraper(credentials=settings.credentials)
     tweets = await scraper.collect_tweets(handle=handle)

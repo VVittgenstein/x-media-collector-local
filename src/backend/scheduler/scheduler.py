@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 
+from src.backend.lifecycle.models import StartMode
 from src.shared.task_status import TaskStatus
 
 from .config import SchedulerConfig
@@ -61,11 +62,21 @@ class Scheduler:
     # Public API
     # ---------------------------------------------------------------------
 
-    async def enqueue(self, *, handle: str, kind: str, account_config: dict[str, Any]) -> Run:
+    async def enqueue(
+        self,
+        *,
+        handle: str,
+        kind: str,
+        account_config: dict[str, Any],
+        start_mode: Optional[StartMode] = None,
+    ) -> Run:
         if not handle or not handle.strip():
             raise ValueError("handle 不能为空")
         if kind not in ("start", "continue"):
             raise ValueError("kind 必须是 start 或 continue")
+
+        if kind != "start":
+            start_mode = None
 
         async with self._lock:
             if handle in self._active_run_by_handle:
@@ -85,6 +96,7 @@ class Scheduler:
                 status=status,
                 created_at=now,
                 updated_at=now,
+                start_mode=start_mode,
                 error=None,
             )
 

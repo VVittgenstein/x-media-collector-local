@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from src.shared.task_status import TaskStatus
+from src.backend.lifecycle.models import StartMode
 
 from .scheduler import Scheduler, SchedulerConflictError
 
@@ -13,6 +14,7 @@ from .scheduler import Scheduler, SchedulerConflictError
 class RunRequestIn(BaseModel):
     handle: str = Field(min_length=1)
     account_config: dict[str, Any] = Field(default_factory=dict)
+    start_mode: Optional[StartMode] = None
 
 
 class CancelIn(BaseModel):
@@ -72,7 +74,12 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
     @router.post("/start", response_model=HandleStateOut)
     async def start_run(body: RunRequestIn) -> HandleStateOut:
         try:
-            await scheduler.enqueue(handle=body.handle, kind="start", account_config=body.account_config)
+            await scheduler.enqueue(
+                handle=body.handle,
+                kind="start",
+                account_config=body.account_config,
+                start_mode=body.start_mode,
+            )
         except SchedulerConflictError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ValueError as exc:
@@ -89,7 +96,12 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
     @router.post("/continue", response_model=HandleStateOut)
     async def continue_run(body: RunRequestIn) -> HandleStateOut:
         try:
-            await scheduler.enqueue(handle=body.handle, kind="continue", account_config=body.account_config)
+            await scheduler.enqueue(
+                handle=body.handle,
+                kind="continue",
+                account_config=body.account_config,
+                start_mode=body.start_mode,
+            )
         except SchedulerConflictError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ValueError as exc:
@@ -119,4 +131,3 @@ def create_scheduler_router(*, scheduler: Scheduler) -> APIRouter:
         )
 
     return router
-

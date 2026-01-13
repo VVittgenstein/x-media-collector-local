@@ -7,6 +7,10 @@ Provides:
 - Lifecycle operations API
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from .models import StartMode, CancelMode
 from .operations import (
     check_existing_files,
@@ -16,7 +20,19 @@ from .operations import (
     StartPrepareResult,
     CancelPrepareResult,
 )
-from .api import create_lifecycle_router
+
+if TYPE_CHECKING:
+    from src.backend.fs import AccountStorageManager
+    from fastapi import APIRouter  # pragma: no cover
+
+
+def create_lifecycle_router(*, storage: "AccountStorageManager") -> "APIRouter":
+    """
+    Lazily import FastAPI router to keep non-web imports lightweight.
+    """
+    from .api import create_lifecycle_router as _create_lifecycle_router
+
+    return _create_lifecycle_router(storage=storage)
 
 __all__ = [
     "StartMode",

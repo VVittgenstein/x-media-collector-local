@@ -235,20 +235,20 @@ class AccountRow {
       }
 
       // Now start the task
-      this._startOrContinue("start", { handle, config });
+      this._startOrContinue("start", { handle, config, startMode: mode });
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
       this.reasonEl.textContent = `准备失败（${message}）`;
     }
   }
 
-  async _startOrContinue(kind, { handle, config }) {
+  async _startOrContinue(kind, { handle, config, startMode }) {
     const endpoint = kind === "continue" ? "/api/scheduler/continue" : "/api/scheduler/start";
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: handle, account_config: config }),
+        body: JSON.stringify({ handle: handle, account_config: config, start_mode: startMode }),
       });
       if (!res.ok) {
         const detail = await this._readError(res);

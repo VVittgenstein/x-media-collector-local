@@ -776,7 +776,7 @@
       ],
       "lane": "now",
       "priority_suggested": "P0",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-012-ignore-history-replace-rule",
         "T-20260113-act-007-lifecycle-start-continue-cancel",
@@ -792,20 +792,28 @@
         "tests"
       ],
       "artifacts": [
-        "src/backend/lifecycle/restart_policy.*",
-        "tests/lifecycle/ignore_replace.test.*"
+        "src/backend/downloader/downloader.py",
+        "src/backend/pipeline/account_runner.py",
+        "src/backend/scheduler/models.py",
+        "src/backend/scheduler/scheduler.py",
+        "src/backend/scheduler/api.py",
+        "src/backend/lifecycle/__init__.py",
+        "src/frontend/app.js",
+        "tests/lifecycle/__init__.py",
+        "tests/lifecycle/test_ignore_replace.py"
       ],
       "citations": [
         "EVID-001",
         "EVID-002"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T20:30:12Z",
+      "owner": "codex",
       "tags": [
         "seed:ACT-012",
         "build"
-      ]
+      ],
+      "completion_notes": "实现并落地 Ignore+Replace（ADR-0004）到 Start New：1) 前端 Start New 弹窗选项透传 `start_mode` 到 `/api/scheduler/start` 并存入 Run；2) Runner 按 `start_mode=ignore_replace` 选择 Replace 路径，预扫描历史文件构建 hash->path 映射；3) Downloader 按内容 hash 去重（同 run newest-first first-wins），写入采用临时文件 + `os.replace` 原子落盘，且仅在新文件写入成功后删除历史同 hash 文件（删除失败仅 warning 不阻塞）；4) 新增单测覆盖 ADR 场景 1/2/4，`python3 -m unittest discover -s tests` 全部通过。"
     },
 
     "T-20260113-design-min-short-side-filter-approach": {
