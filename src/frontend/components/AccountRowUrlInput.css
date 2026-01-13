@@ -1,0 +1,101 @@
+/**
+ * AccountRowUrlInput 组件样式
+ */
+
+.account-url-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.account-url-input-wrapper .input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-url-input-wrapper .url-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 280px;
+}
+
+.account-url-input-wrapper .url-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.account-url-input-wrapper .url-input::placeholder {
+  color: #9ca3af;
+}
+
+.account-url-input-wrapper .url-input:disabled {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* 有效状态 */
+.account-url-input-wrapper.valid .url-input {
+  border-color: #10b981;
+}
+
+.account-url-input-wrapper.valid .url-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* 无效状态 */
+.account-url-input-wrapper.invalid .url-input {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.account-url-input-wrapper.invalid .url-input:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* 禁用状态 */
+.account-url-input-wrapper.disabled .url-input {
+  background-color: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Handle 展示 */
+.account-url-input-wrapper .handle-display {
+  display: none;
+  padding: 4px 10px;
+  background-color: #ecfdf5;
+  color: #059669;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.account-url-input-wrapper.valid .handle-display {
+  display: inline;
+}
+
+/* 错误信息 */
+.account-url-input-wrapper .error-message {
+  display: none;
+  color: #dc2626;
+  font-size: 12px;
+  line-height: 1.4;
+  padding-left: 2px;
+}
+
+.account-url-input-wrapper.invalid .error-message {
+  display: block;
+}
