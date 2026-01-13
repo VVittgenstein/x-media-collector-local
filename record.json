@@ -1,0 +1,1204 @@
+{
+  "project_context": {
+    "brief": "本地部署 WebUI：输入一个或多个 https://x.com/<handle> 账号主页 URL，为每个账号配置筛选条件并启动任务，自动下载符合条件的图片/视频到本地目录结构。",
+    "mvp_goal": "给定有效会话凭证与下载根目录，支持多账号并发（默认 3）+ FIFO 队列，按筛选条件抓取并落盘媒体，满足命名/去重/统计/取消与续跑语义。",
+    "non_goals": [
+      "不做图片预览墙，仅展示统计与打开文件夹",
+      "不做建库型媒体资产管理系统",
+      "不使用官方开发者 API（不申请 API Key）",
+      "不自动获取用户凭证（由用户手动粘贴）",
+      "不做持续监控（按需手动触发采集）"
+    ]
+  },
+  "md_source": "read_only.md",
+  "generated_at": "2026-01-13T04:51:26Z",
+  "tasks": {
+    "T-20260113-act-001-arch-task-model": {
+      "order": "1/21",
+      "seed_id": "ACT-001",
+      "title": "确定后端架构与异步任务模型（WebUI + 任务队列）",
+      "type": "design",
+      "summary": "先拍板技术栈与任务执行模型，以支撑"账号级并发 + FIFO 队列 + 锁定/状态展示"的产品行为与后续抓取/落盘实现。[EVID-001][EVID-002]",
+      "acceptance_draft": [
+        "给出后端/前端技术栈选择与理由（优先满足本地部署、一键启动、可维护）",
+        "定义任务调度模型：MaxConcurrent 默认 3、FIFO、账号级串行、Queued/Running 锁定规则",
+        "确定 UI 获取状态方式：轮询/SSE/WebSocket 其一，并说明状态一致性与刷新策略",
+        "明确抓取层与业务层边界：抓取可替换升级，不影响过滤/命名/去重/队列逻辑"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 4,
+      "interfaces_touched": [
+        "backend",
+        "frontend",
+        "scheduler",
+        "scrape-layer boundary"
+      ],
+      "artifacts": [
+        "docs/architecture.md",
+        "docs/adr/0001-tech-stack.md",
+        "docs/adr/0002-task-execution-model.md"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-001"
+      ]
+    },
+
+    "T-20260113-design-credential-input-format": {
+      "order": "2/21",
+      "seed_id": "",
+      "title": "[已拍板] 凭证输入格式：分字段输入 + 示例指导",
+      "type": "design",
+      "summary": "[已决策] 采用分字段输入（ct0、auth_token 等），UI 提供字段格式示例；不允许配置 User-Agent；凭证可本地存储，无需额外安全处理。[D-20260113-credential-split-input][D-20260113-credential-no-user-agent][D-20260113-credential-local-storage]",
+      "acceptance_draft": [
+        "[已拍板] 分字段输入：ct0、auth_token 等，附带格式示例说明帮助用户识别",
+        "定义最小可用字段集合与缺失时的阻止启动提示文案",
+        "定义最小校验：一次轻量请求验证登录态/401/403 的可解释错误",
+        "[已拍板] 凭证可本地存储，无需加密；User-Agent 由系统内置，不可配置"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-001-arch-task-model"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 3,
+      "interfaces_touched": [
+        "settings/credentials",
+        "config-store",
+        "request-auth headers"
+      ],
+      "artifacts": [
+        "docs/adr/0003-credentials-format.md"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "design",
+        "security"
+      ]
+    },
+
+    "T-20260113-act-003-url-validate-handle": {
+      "order": "3/21",
+      "seed_id": "ACT-003",
+      "title": "实现账号 URL 严格校验与 handle 解析",
+      "type": "build",
+      "summary": "账号 URL 的严格格式是入口约束；必须在输入阶段给出明确错误并禁止启动该行任务。[EVID-001]",
+      "acceptance_draft": [
+        "仅接受严格匹配 `https://x.com/<handle>`（不允许末尾 /、query、额外路径、twitter.com、@handle）",
+        "合法输入自动解析并展示 handle；非法输入行标红并显示可理解原因",
+        "非法行 Start/Continue 按钮禁用，且不会被加入队列"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-001-arch-task-model"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 3,
+      "interfaces_touched": [
+        "frontend/account-input",
+        "validation"
+      ],
+      "artifacts": [
+        "src/shared/validators/x_handle_url.*",
+        "src/frontend/components/AccountRowUrlInput.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-003"
+      ]
+    },
+
+    "T-20260113-build-filter-engine": {
+      "order": "4/21",
+      "seed_id": "",
+      "title": "实现过滤与分类规则的纯逻辑层（可用 JSON fixture 回归）",
+      "type": "build",
+      "summary": "把"日期/媒体类型/来源类型/Reply+Quote 开关/MIN_SHORT_SIDE"等规则固化为可测试的纯函数，便于抓取层变化时复用。[EVID-001][EVID-002]",
+      "acceptance_draft": [
+        "实现推文分类：Reply 优先归 Reply；Quote 仅指非 Reply 且存在引用关系",
+        "实现筛选：日期闭区间、媒体类型（images/videos/both）、来源类型多选、Reply+Quote 开关行为",
+        "实现 MIN_SHORT_SIDE 过滤：低于阈值的媒体不进入下载意图列表（并返回可计数的过滤原因）",
+        "提供至少 5 个 fixture 用例，断言输出的"下载意图列表"稳定可复现"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-001-arch-task-model"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 6,
+      "interfaces_touched": [
+        "filter-engine",
+        "tweet-classifier",
+        "fixtures"
+      ],
+      "artifacts": [
+        "src/shared/filter_engine/*",
+        "tests/filter_engine/*",
+        "artifacts/fixtures/tweets/*.json"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-009",
+        "build"
+      ]
+    },
+
+    "T-20260113-act-004-global-settings": {
+      "order": "5/21",
+      "seed_id": "ACT-004",
+      "title": "实现全局设置页：凭证输入、Download Root、Max Concurrent",
+      "type": "build",
+      "summary": "全局设置决定任务能否启动与落盘路径，且涉及敏感信息处理与默认并发策略（默认 3）。[EVID-001][EVID-002]",
+      "acceptance_draft": [
+        "提供全局凭证输入与保存：保存后仅显示"已设置"，不回显明文",
+        "未配置凭证时，所有账号行的 Start/Continue 被阻止并提示原因",
+        "Download Root 可配置并用于后续落盘；Root 不可写时给出明确错误",
+        "Max Concurrent 默认 3，可修改并即时影响调度器"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-design-credential-input-format"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 6,
+      "interfaces_touched": [
+        "frontend/settings",
+        "backend/settings api",
+        "config-store",
+        "scheduler config"
+      ],
+      "artifacts": [
+        "src/frontend/settings/*",
+        "src/backend/settings/*",
+        "data/config.json (runtime)"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-004",
+        "security"
+      ]
+    },
+
+    "T-20260113-act-002-spike-cookie-scrape": {
+      "order": "6/21",
+      "seed_id": "ACT-002",
+      "title": "Spike：用登录 Cookies 访问 X 内部接口并抓取媒体推文样本",
+      "type": "research",
+      "summary": "验证核心抓取路径可行性与风控阈值，并收集真实响应样本用于字段解析、视频/分辨率元数据与限流策略校准。[EVID-002][EVID-003][EVID-004]",
+      "acceptance_draft": [
+        "在有效凭证下，成功获取目标账号至少 50 条含媒体推文并下载落盘样本",
+        "记录错误类型（如 429/401/403）、重试结果与耗时，并沉淀最小可复现日志（需脱敏）",
+        "24h 内账号无明显受限迹象（观察项，记录现象即可）",
+        "保存 2-3 份脱敏后的 JSON 响应样本供后续解析/测试使用"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-design-credential-input-format"
+      ],
+      "blocked": true,
+      "blocked_by": [
+        {
+          "dep_id": "DEP-001",
+          "name": "用户提供的 X 已登录会话凭证（Cookies/Token）",
+          "type": "access",
+          "status": "pending",
+          "doc_url": "",
+          "note": "无有效凭证会导致认证失败，无法验证抓取路径。"
+        },
+        {
+          "dep_id": "DEP-002",
+          "name": "X 网页内部接口可用性（GraphQL/内部端点）",
+          "type": "api",
+          "status": "unknown",
+          "doc_url": "",
+          "note": "接口可能变更/限流/封锁，需通过 Spike 校准可用性与字段。"
+        },
+        {
+          "dep_id": "DEP-003",
+          "name": "twscrape 开源库（或同类 GraphQL 抓取库）",
+          "type": "lib",
+          "status": "approved",
+          "doc_url": "https://pypi.org/project/twscrape/",
+          "note": "优先集成开源库以降低 doc_id 等变动维护成本。"
+        }
+      ],
+      "unblock_plan": "先由用户提供可用的 auth_token/ct0 等会话信息；若抓取失败，按"降低频率/启用代理/升级抓取库/切换方案"逐步排障并记录结论。",
+      "estimate_h": 6,
+      "interfaces_touched": [
+        "scrape-layer",
+        "downloader (sample)",
+        "error taxonomy"
+      ],
+      "artifacts": [
+        "scripts/spike_scrape_sample.*",
+        "artifacts/samples/x_timeline_*.json"
+      ],
+      "citations": [
+        "EVID-002",
+        "EVID-003",
+        "EVID-004"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-002",
+        "blocked"
+      ]
+    },
+
+    "T-20260113-test-url-validation": {
+      "order": "7/21",
+      "seed_id": "",
+      "title": "为账号 URL 严格校验补齐自动化测试用例",
+      "type": "test",
+      "summary": "URL 校验验收用例清晰，适合用单测锁住边界，避免后续 UI/解析改动引入回归。[EVID-001]",
+      "acceptance_draft": [
+        "测试通过：`https://x.com/shanghaixc2`",
+        "测试失败：末尾 `/`、`twitter.com`、带 query、`@handle`、额外路径 `/media`",
+        "失败用例断言包含具体错误原因（可面向用户展示）"
+      ],
+      "lane": "now",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-003-url-validate-handle"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 2,
+      "interfaces_touched": [
+        "tests/validation"
+      ],
+      "artifacts": [
+        "tests/validators/x_handle_url.test.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "test"
+      ]
+    },
+
+    "T-20260113-act-008-storage-naming-dedup": {
+      "order": "8/21",
+      "seed_id": "ACT-008",
+      "title": "实现落盘规则：目录结构、命名、内容 hash、账号内去重 first-wins",
+      "type": "build",
+      "summary": "训练数据采集的关键产物在落盘规则：固定目录结构、文件名包含 tweetId、内容 hash 去重（first wins）与重复统计口径。[EVID-001]",
+      "acceptance_draft": [
+        "账号目录结构固定：`<root>/<handle>/images/` 与 `<root>/<handle>/videos/`",
+        "命名符合 `<tweetId>_<YYYY-MM-DD><hash6>.<ext>`，日期来自 created_at，hash6 来自下载后内容 hash",
+        "账号内按内容 hash 去重，first wins：后遇到的重复媒体删除新下载临时文件并计入 `skipped_duplicate`",
+        "遍历顺序支持"从新到旧"串行处理以保证 first wins 可解释"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-004-global-settings"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 7,
+      "interfaces_touched": [
+        "filesystem",
+        "downloader",
+        "hashing",
+        "dedup-index"
+      ],
+      "artifacts": [
+        "src/backend/downloader/*",
+        "src/backend/fs/*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-008"
+      ]
+    },
+
+    "T-20260113-act-005-account-row-config-copy-paste": {
+      "order": "9/21",
+      "seed_id": "ACT-005",
+      "title": "实现账号行 UI：每账号配置项与 Copy/Paste Config",
+      "type": "build",
+      "summary": "多账号批量配置是核心交互；每行独立配置并支持 Copy/Paste（Locked 时禁用 Paste）是关键边界。[EVID-001]",
+      "acceptance_draft": [
+        "每账号配置项齐全：日期范围、媒体类型（images/videos/both）、来源类型（4 复选框）、MIN_SHORT_SIDE、Reply+Quote 开关",
+        "Copy Config 复制筛选参数但不包含 URL/handle",
+        "Paste Config 全覆盖应用剪贴板参数且不改变 URL/handle",
+        "Queued/Running（Locked）时 Paste 置灰并提示原因；Copy 保持可用"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-003-url-validate-handle",
+        "T-20260113-act-004-global-settings"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 6,
+      "interfaces_touched": [
+        "frontend/account-row",
+        "config-clipboard",
+        "lock-state"
+      ],
+      "artifacts": [
+        "src/frontend/components/AccountRow.*",
+        "src/frontend/state/configClipboard.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-005"
+      ]
+    },
+
+    "T-20260113-research-video-download-fallback": {
+      "order": "10/21",
+      "seed_id": "",
+      "title": "[已拍板] 视频下载策略：一开始就引入 ffmpeg 作为必选依赖",
+      "type": "research",
+      "summary": "[已决策] 项目一开始就引入 ffmpeg 作为必选依赖，用于处理流媒体视频下载，不做降级跳过。[D-20260113-ffmpeg-required]",
+      "acceptance_draft": [
+        "基于 Spike 样本，列出视频字段形态（直链 mp4 / 多码率 / m3u8 等）与占比观察",
+        "[已拍板] ffmpeg 作为必选依赖，一开始就引入，用于处理流媒体视频",
+        "补充 1 条产品层行为：当视频无法下载时如何计数与呈现错误"
+      ],
+      "lane": "now",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-002-spike-cookie-scrape"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 4,
+      "interfaces_touched": [
+        "video-download",
+        "optional-deps",
+        "error-reporting"
+      ],
+      "artifacts": [
+        "docs/adr/0006-video-download-fallback.md"
+      ],
+      "citations": [
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "research"
+      ]
+    },
+
+    "T-20260113-act-006-scheduler-fifo-locking": {
+      "order": "11/21",
+      "seed_id": "ACT-006",
+      "title": "实现调度器：MaxConcurrent 默认 3、FIFO 队列、账号级锁定",
+      "type": "build",
+      "summary": "并发/队列/锁定规则是 WebUI 体验与状态一致性的核心：账号间并行、账号内串行、FIFO、公平且可取消。[EVID-001]",
+      "acceptance_draft": [
+        "MaxConcurrent=3 时，对 5 个账号点 Start：3 Running + 2 Queued",
+        "任一 Running 结束后，队首账号自动进入 Running（FIFO）",
+        "点击 Start/Continue 后，无论进入 Queued 还是 Running，该账号参数立即锁定不可编辑/不可 Paste",
+        "Queued 状态点击 Cancel：直接移出队列、立即解锁、不弹窗、无副作用"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-005-account-row-config-copy-paste"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 6,
+      "interfaces_touched": [
+        "scheduler",
+        "queue",
+        "task-state"
+      ],
+      "artifacts": [
+        "src/backend/scheduler/*",
+        "src/shared/taskStatus.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-006"
+      ]
+    },
+
+    "T-20260113-act-009-scrape-and-apply-filters": {
+      "order": "12/21",
+      "seed_id": "ACT-009",
+      "title": "实现抓取与过滤集成：日期、媒体类型、来源类型、Reply+Quote、MIN_SHORT_SIDE",
+      "type": "build",
+      "summary": "把抓取层数据转为符合用户意图的下载集合，并保证同条件下结果稳定可复现（分类/过滤规则严格按文档）。[EVID-001][EVID-002]",
+      "acceptance_draft": [
+        "使用抓取库获取指定 handle 的媒体推文并支持分页（cursor 或等价机制）",
+        "将抓取结果输入过滤引擎后，输出"下载意图"集合稳定可复现（同条件多次运行一致）",
+        "Reply/Quote 分类符合规则；Reply+Quote 开关 ON/OFF 的下载集合符合定义",
+        "MIN_SHORT_SIDE 生效：被过滤媒体不落盘（仅计入过滤/跳过统计）"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-002-spike-cookie-scrape",
+        "T-20260113-act-004-global-settings",
+        "T-20260113-act-008-storage-naming-dedup",
+        "T-20260113-build-filter-engine"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 8,
+      "interfaces_touched": [
+        "scrape-layer",
+        "filter-engine",
+        "downloader integration"
+      ],
+      "artifacts": [
+        "src/backend/scraper/*",
+        "src/backend/pipeline/account_runner.*"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-009"
+      ]
+    },
+
+    "T-20260113-test-naming-dedup": {
+      "order": "13/21",
+      "seed_id": "",
+      "title": "为命名与内容 hash 去重补齐自动化测试",
+      "type": "test",
+      "summary": "命名与去重直接影响训练数据可追溯性与结果稳定性，需用测试锁定格式与 first-wins 行为。[EVID-001]",
+      "acceptance_draft": [
+        "断言生成文件名可解析出 tweetId 与 YYYY-MM-DD",
+        "断言 hash6 等于内容 hash 前 6 位",
+        "模拟两次写入相同内容：第一次保留，第二次删除临时文件并 `skipped_duplicate`+1"
+      ],
+      "lane": "now",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-008-storage-naming-dedup"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 3,
+      "interfaces_touched": [
+        "tests/downloader"
+      ],
+      "artifacts": [
+        "tests/downloader/naming_dedup.test.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "test"
+      ]
+    },
+
+    "T-20260113-act-007-lifecycle-start-continue-cancel": {
+      "order": "14/21",
+      "seed_id": "ACT-007",
+      "title": "实现任务生命周期：Start New / Continue / Cancel 与弹窗逻辑",
+      "type": "build",
+      "summary": "取消与续跑决定可恢复性；Start New 的三选弹窗涉及破坏性操作，需要严格流程与文件系统效果一致。[EVID-001]",
+      "acceptance_draft": [
+        "Start New 与 Continue 分离为两个动作（非同一按钮复用）",
+        "Running 状态 Cancel 必弹窗：Keep/Delete；Queued Cancel 无弹窗且无副作用",
+        "Start New 时若账号目录存在历史文件，必出三选弹窗（Delete / Ignore+Replace / Pack）",
+        "Pack&Restart：生成 zip 并删除原文件，zip 留在账号目录；Delete&Restart：清空后重跑"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-006-scheduler-fifo-locking",
+        "T-20260113-act-008-storage-naming-dedup"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 8,
+      "interfaces_touched": [
+        "task-lifecycle",
+        "dialogs",
+        "filesystem-ops",
+        "task-state"
+      ],
+      "artifacts": [
+        "src/frontend/components/ConfirmModals.*",
+        "src/backend/lifecycle/*",
+        "src/backend/fs/archive_zip.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-007"
+      ]
+    },
+
+    "T-20260113-test-scheduler-fifo-locking": {
+      "order": "15/21",
+      "seed_id": "",
+      "title": "为调度器补齐 FIFO/锁定/Queued 取消的自动化测试",
+      "type": "test",
+      "summary": "队列与锁定是高回归风险区，用单测模拟多账号入队/出队/完成来锁住 FIFO 与状态机边界。[EVID-001]",
+      "acceptance_draft": [
+        "覆盖：5 个账号 Start + MaxConcurrent=3 -> 3 Running + 2 Queued",
+        "覆盖：Running 完成后队首转 Running",
+        "覆盖：Queued Cancel 直接移除且解锁，不触发"Keep/Delete"弹窗路径",
+        "覆盖：Locked 时配置不可更改/不可 Paste（可用状态断言表达）"
+      ],
+      "lane": "now",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-006-scheduler-fifo-locking"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 3,
+      "interfaces_touched": [
+        "tests/scheduler"
+      ],
+      "artifacts": [
+        "tests/scheduler/fifo_locking.test.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "test"
+      ]
+    },
+
+    "T-20260113-act-012-ignore-history-replace-rule": {
+      "order": "16/21",
+      "seed_id": "ACT-012",
+      "title": "[已拍板] Ignore+Replace 规则：按内容 hash 判定，新 run 优先覆盖",
+      "type": "design",
+      "summary": "[已决策] 按内容 hash 判定相同文件，不看文件名；跨 run 时选择 Ignore+Replace 则当前 run 优先，允许新内容覆盖旧内容。[D-20260113-ignore-replace-by-hash][D-20260113-ignore-replace-new-wins]",
+      "acceptance_draft": [
+        "[已拍板] 按内容 hash 判定相同文件，不看文件名",
+        "[已拍板] 跨 run 时选 Ignore+Replace：当前 run 优先，允许新覆盖旧",
+        "给出至少 3 个可复现示例场景（旧文件存在/重复内容/同名不同内容）与期望结果",
+        "把规则落实为可实现的算法描述（供实现与测试）"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-007-lifecycle-start-continue-cancel",
+        "T-20260113-act-008-storage-naming-dedup"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 3,
+      "interfaces_touched": [
+        "restart-policy",
+        "dedup",
+        "filesystem-ops"
+      ],
+      "artifacts": [
+        "docs/adr/0004-ignore-history-replace.md"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-012"
+      ]
+    },
+
+    "T-20260113-build-ignore-history-replace": {
+      "order": "17/21",
+      "seed_id": "",
+      "title": "实现 Ignore History + Replace 规则并补齐测试",
+      "type": "build",
+      "summary": "将已拍板的 Ignore+Replace 判定规则落地到 Start New 流程，确保跨 run 行为可解释且可回归测试。[EVID-001][EVID-002]",
+      "acceptance_draft": [
+        "Start New 选择 Ignore+Replace 后，文件系统效果符合 ADR 规则且可复现",
+        "与账号内去重（内容 hash first-wins）交互明确：不会产生不可解释的重复或误删",
+        "补齐自动化测试覆盖至少 3 个 ADR 场景"
+      ],
+      "lane": "now",
+      "priority_suggested": "P0",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-012-ignore-history-replace-rule",
+        "T-20260113-act-007-lifecycle-start-continue-cancel",
+        "T-20260113-act-008-storage-naming-dedup"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 5,
+      "interfaces_touched": [
+        "restart-policy",
+        "filesystem-ops",
+        "tests"
+      ],
+      "artifacts": [
+        "src/backend/lifecycle/restart_policy.*",
+        "tests/lifecycle/ignore_replace.test.*"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-012",
+        "build"
+      ]
+    },
+
+    "T-20260113-design-min-short-side-filter-approach": {
+      "order": "18/21",
+      "seed_id": "",
+      "title": "[已拍板] MIN_SHORT_SIDE 自适应策略：有元数据则前置过滤，否则下载后删除",
+      "type": "design",
+      "summary": "[已决策] 采用自适应策略：JSON 有可靠 width/height 则下载前过滤；否则先下载再判断，低于阈值则删除。[D-20260113-min-short-side-adaptive]",
+      "acceptance_draft": [
+        "基于 Spike 的真实 JSON 样本，确认图片/视频是否稳定提供 width/height 或可推导分辨率",
+        "[已拍板] 自适应策略：有 width/height 则下载前过滤；否则下载后判断删除",
+        "补充 1 条用户可理解的 UI/文档说明文案（解释可能的带宽浪费）"
+      ],
+      "lane": "next",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-002-spike-cookie-scrape"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 2,
+      "interfaces_touched": [
+        "filter-engine",
+        "scrape-layer",
+        "ui/help-text"
+      ],
+      "artifacts": [
+        "docs/adr/0005-min-short-side-metadata.md"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "design"
+      ]
+    },
+
+    "T-20260113-act-010-stats-open-folder": {
+      "order": "19/21",
+      "seed_id": "ACT-010",
+      "title": "实现统计口径与展示：runtime、avg_speed、打开文件夹",
+      "type": "build",
+      "summary": "UI 不做预览墙，核心反馈是统计与路径；统计口径（runtime/avg_speed）是验收项，需要严格实现。[EVID-001]",
+      "acceptance_draft": [
+        "每账号展示：images_downloaded、videos_downloaded、runtime、avg_speed、输出路径与打开文件夹按钮",
+        "runtime 从进入 Running 计时，不包含 Queued 等待时间",
+        "avg_speed=(images_downloaded+videos_downloaded+skipped_duplicate)/runtime（runtime>0 时）",
+        "打开文件夹：目录不存在/已删除时给出明确提示，不静默失败"
+      ],
+      "lane": "next",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-006-scheduler-fifo-locking",
+        "T-20260113-act-008-storage-naming-dedup"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 5,
+      "interfaces_touched": [
+        "stats",
+        "ui/account-row status",
+        "open-folder"
+      ],
+      "artifacts": [
+        "src/shared/stats/*",
+        "src/frontend/components/AccountRowStats.*",
+        "src/backend/os/open_folder.*"
+      ],
+      "citations": [
+        "EVID-001"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-010"
+      ]
+    },
+
+    "T-20260113-act-011-throttle-backoff-proxy": {
+      "order": "20/21",
+      "seed_id": "ACT-011",
+      "title": "实现限流、随机延迟、指数退避与可选代理配置（保守默认值）",
+      "type": "build",
+      "summary": "非官方调用存在限流/风控风险；需要限速、随机延迟、指数退避，并提供可选代理入口。[已决策] 默认采用保守设计，具体参数待 Spike 实验后调整。[D-20260113-throttle-conservative-default]",
+      "acceptance_draft": [
+        "提供可配置节流参数（如每请求最小间隔、随机抖动范围、最大重试次数）",
+        "遇到 429/疑似限流错误触发指数退避（等待后重试或明确失败）",
+        "支持代理配置：开启后抓取/下载请求走代理且不影响其他逻辑",
+        "[已拍板] 默认采用保守参数，先稳后快；具体数值待 Spike 实验后根据平台反应收敛"
+      ],
+      "lane": "next",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-002-spike-cookie-scrape",
+        "T-20260113-act-009-scrape-and-apply-filters"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 6,
+      "interfaces_touched": [
+        "http-client",
+        "rate-limit",
+        "retry/backoff",
+        "proxy"
+      ],
+      "artifacts": [
+        "src/backend/net/throttle.*",
+        "src/backend/net/retry.*",
+        "src/frontend/settings/proxy.*"
+      ],
+      "citations": [
+        "EVID-002",
+        "EVID-003"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "seed:ACT-011"
+      ]
+    },
+
+    "T-20260113-doc-readme-ops-and-risks": {
+      "order": "21/21",
+      "seed_id": "",
+      "title": "补齐 README：一键启动、凭证说明、风险提示与排障路径",
+      "type": "doc",
+      "summary": "本地工具的可用性与风险提示是最低要求：需要说明如何启动、如何提供凭证、常见错误（认证失败/429）与"升级依赖/降频/启用代理"的运维路径。[EVID-001][EVID-002][EVID-003]",
+      "acceptance_draft": [
+        "README 提供 1 条一键启动路径（含依赖安装与启动命令）",
+        "说明凭证来自用户浏览器，工具不自动获取；明确"已设置"不回显原则",
+        "显著提示风控/封禁风险与建议（例如使用非主账号、控制频率）",
+        "给出抓取失败时的排障步骤：检查凭证->降频->启用代理->升级抓取库"
+      ],
+      "lane": "next",
+      "priority_suggested": "P1",
+      "status": "todo",
+      "dependencies": [
+        "T-20260113-act-004-global-settings"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 3,
+      "interfaces_touched": [
+        "docs/readme",
+        "ui/help-text"
+      ],
+      "artifacts": [
+        "README.md",
+        "docs/ops/troubleshooting.md"
+      ],
+      "citations": [
+        "EVID-001",
+        "EVID-002",
+        "EVID-003"
+      ],
+      "created_at": "2026-01-13T04:51:26Z",
+      "updated_at": "2026-01-13T04:51:26Z",
+      "owner": "tbd",
+      "tags": [
+        "doc",
+        "security"
+      ]
+    }
+  },
+  "questions_for_human": [],
+  "assumptions": [
+    "用户可自行从已登录浏览器提取会话信息并接受相关风险提示。[EVID-001]",
+    "工具以本地运行优先，不依赖外部数据库或云服务。[EVID-001][EVID-002]"
+  ],
+  "risks": [
+    {
+      "id": "R-20260113-x-api-breaks",
+      "summary": "平台内部接口变更导致抓取失效（doc_id/字段/参数变化）。",
+      "severity": "high",
+      "mitigation": "[已决策] 优先集成维护活跃的抓取库；抓取层与业务层解耦；失败时直接提示抓取库失效，等待作者更新，不做后备方案。[D-20260113-no-scrape-fallback]",
+      "citations": [
+        "EVID-002",
+        "EVID-003",
+        "EVID-004"
+      ]
+    },
+    {
+      "id": "R-20260113-rate-limit",
+      "summary": "触发限流/风控（429/验证码/临时锁定）导致任务失败或账号受限。",
+      "severity": "high",
+      "mitigation": "实现限速、随机延迟、指数退避；默认并发仅在账号层面；必要时支持代理与冷却停止。",
+      "citations": [
+        "EVID-001",
+        "EVID-002",
+        "EVID-003"
+      ]
+    },
+    {
+      "id": "R-20260113-account-ban",
+      "summary": "使用真实用户会话凭证抓取存在违反平台条款与封禁风险。",
+      "severity": "high",
+      "mitigation": "在 UI/文档中显著提示风险；建议使用非主账号；提供停止/降频/冷却建议。",
+      "citations": [
+        "EVID-002"
+      ]
+    },
+    {
+      "id": "R-20260113-credential-leak",
+      "summary": "凭证泄露（日志/前端回显/错误上报包含敏感字段）。",
+      "severity": "high",
+      "mitigation": "敏感字段脱敏与禁记日志；UI 不二次明文展示；提供清除/更新路径。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ]
+    },
+    {
+      "id": "R-20260113-video-complex",
+      "summary": "视频下载复杂性（流媒体清单、断点、完整性校验）导致失败率上升。",
+      "severity": "mid",
+      "mitigation": "[已决策] 一开始就引入 ffmpeg 作为必选依赖处理流媒体；优先选择 JSON 中可用的最高质量直链；实现重试与完整性校验。[D-20260113-ffmpeg-required]",
+      "citations": [
+        "EVID-002"
+      ]
+    },
+    {
+      "id": "R-20260113-dep-stale",
+      "summary": "第三方依赖停更或版本滞后导致抓取层不可用。",
+      "severity": "mid",
+      "mitigation": "[已决策] 锁定可用版本；失效时直接提示用户等待作者更新，不准备替代库或自研抓取层。[D-20260113-no-scrape-fallback]",
+      "citations": [
+        "EVID-002",
+        "EVID-004",
+        "EVID-005"
+      ]
+    }
+  ],
+  "external_dependencies": [
+    {
+      "dep_id": "DEP-001",
+      "name": "用户提供的 X 已登录会话凭证（Cookies/Token）",
+      "type": "access",
+      "status": "pending",
+      "doc_url": "",
+      "note": "无有效凭证无法访问受限内容或触发认证失败；需在 UI 提供输入与校验提示。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ]
+    },
+    {
+      "dep_id": "DEP-002",
+      "name": "X 网页内部接口可用性（GraphQL/内部端点）",
+      "type": "api",
+      "status": "unknown",
+      "doc_url": "",
+      "note": "接口可能变更/限流/增强反爬导致抓取失败；先做 Spike 校准并保留升级/切换方案。",
+      "citations": [
+        "EVID-002",
+        "EVID-003"
+      ]
+    },
+    {
+      "dep_id": "DEP-003",
+      "name": "twscrape 开源库（或同类 GraphQL 抓取库）",
+      "type": "lib",
+      "status": "approved",
+      "doc_url": "https://pypi.org/project/twscrape/",
+      "note": "可直接引入，但需关注版本更新与安全审计；保留替代库/自研应急路径。",
+      "citations": [
+        "EVID-002",
+        "EVID-004"
+      ]
+    },
+    {
+      "dep_id": "DEP-004",
+      "name": "代理服务或本地代理配置（可选）",
+      "type": "tool",
+      "status": "unknown",
+      "doc_url": "",
+      "note": "是否需要取决于网络环境与风控命中情况；默认关闭，必要时启用。",
+      "citations": [
+        "EVID-001",
+        "EVID-002",
+        "EVID-003"
+      ]
+    },
+    {
+      "dep_id": "DEP-005",
+      "name": "本地文件系统写权限与磁盘空间",
+      "type": "access",
+      "status": "unknown",
+      "doc_url": "",
+      "note": "Root 不可写或磁盘不足会导致下载与归档失败；建议启动前检测写权限并对写入失败给出明确错误。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ]
+    },
+    {
+      "dep_id": "DEP-006",
+      "name": "ffmpeg（必选依赖）",
+      "type": "tool",
+      "status": "approved",
+      "doc_url": "https://ffmpeg.org/",
+      "note": "[已决策] 一开始就引入作为必选依赖，用于处理流媒体视频下载（m3u8 等格式）。需在 README 说明安装方式。[D-20260113-ffmpeg-required]",
+      "citations": [
+        "EVID-002"
+      ]
+    }
+  ],
+  "facts": [
+    "账号目录结构固定为 `<root>/<handle>/{images|videos}/`，handle 从严格 URL 解析得出。[EVID-001]",
+    "文件命名必须包含 tweetId 与 created_at 日期，并附带内容 hash 前 6 位以支持可追溯与去重。[EVID-001]",
+    "去重按账号目录内"下载后文件内容 hash"判定，first wins（按 created_at 从新到旧串行）。[EVID-001]"
+  ],
+  "decisions": [
+    {
+      "id": "D-20260113-webui-local",
+      "summary": "产品形态为本地部署 WebUI 小工具（非 CLI/库）。",
+      "rationale": "交互以账号列表为中心，逐行配置与逐行启动需要可视化状态与队列反馈。",
+      "citations": [
+        "EVID-001"
+      ],
+      "date": "2026-01-13T04:51:26Z"
+    },
+    {
+      "id": "D-20260113-session-simulate",
+      "summary": "抓取方式采用浏览器会话模拟 + X 网页内部接口，不使用官方开发者 API。",
+      "rationale": "避免申请 API Key，契合本地工具快速落地；但需配套风险提示与限流/退避。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "date": "2026-01-13T04:51:26Z"
+    },
+    {
+      "id": "D-20260113-prefer-open-source-graphql-lib",
+      "summary": "优先集成开源 GraphQL 抓取库（如 twscrape）而非自研逆向 GraphQL。",
+      "rationale": "降低 doc_id/参数变动的维护成本，把精力集中在过滤/落盘/任务系统。",
+      "citations": [
+        "EVID-002",
+        "EVID-003",
+        "EVID-004"
+      ],
+      "date": "2026-01-13T04:51:26Z"
+    },
+    {
+      "id": "D-20260113-credential-split-input",
+      "summary": "凭证采用分字段输入（ct0、auth_token 等），并在 UI 提供字段格式示例指导。",
+      "rationale": "分字段输入更清晰，降低用户粘贴错误概率；附带示例说明帮助用户识别各字段来源。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-credential-no-user-agent",
+      "summary": "不允许用户配置 User-Agent，由系统内置固定值。",
+      "rationale": "减少配置复杂度，降低用户误配导致抓取失败的风险。",
+      "citations": [
+        "EVID-001"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-credential-local-storage",
+      "summary": "凭证允许本地存储，不做额外安全加密处理。",
+      "rationale": "本工具定位为个人工具，用户对本机有完全控制权，无需过度安全设计。",
+      "citations": [
+        "EVID-001"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-ignore-replace-by-hash",
+      "summary": "Ignore+Replace 的"相同文件"判定仅按内容 hash，不看文件名。",
+      "rationale": "内容 hash 是更可靠的重复判定依据，避免因命名规则变化导致误判。",
+      "citations": [
+        "EVID-001"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-ignore-replace-new-wins",
+      "summary": "跨 run 时选择 Ignore+Replace，当前 run 优先，允许新内容覆盖旧内容。",
+      "rationale": "用户主动选择 Ignore+Replace 即表示接受以最新 run 为准，简化决策模型。",
+      "citations": [
+        "EVID-001"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-min-short-side-adaptive",
+      "summary": "MIN_SHORT_SIDE 过滤采用自适应策略：JSON 有 width/height 则下载前过滤，否则先下载再判断删除。",
+      "rationale": "兼顾带宽效率与功能完整性；无元数据时降级处理，确保过滤功能始终可用。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-throttle-conservative-default",
+      "summary": "限流与重试参数默认采用保守设计，具体数值待 Spike 实验后根据平台反应调整。",
+      "rationale": "先稳后快，避免激进参数导致账号受限；通过实验数据收敛为合理默认值。",
+      "citations": [
+        "EVID-001",
+        "EVID-002"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-no-scrape-fallback",
+      "summary": "抓取库失效时直接提示用户等待作者更新，不做后备方案。",
+      "rationale": "维护多套抓取方案成本高且难以保证质量；依赖社区维护的开源库是更可持续的策略。",
+      "citations": [
+        "EVID-002",
+        "EVID-003"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    },
+    {
+      "id": "D-20260113-ffmpeg-required",
+      "summary": "项目一开始就引入 ffmpeg 作为必选依赖，用于处理流媒体视频下载。",
+      "rationale": "视频下载是核心功能，提前引入 ffmpeg 避免后期兼容性问题；作为本地工具可接受此依赖。",
+      "citations": [
+        "EVID-002"
+      ],
+      "date": "2026-01-13T05:00:00Z"
+    }
+  ]
+}
