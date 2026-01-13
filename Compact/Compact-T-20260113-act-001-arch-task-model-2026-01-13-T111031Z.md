@@ -74,6 +74,13 @@ Filter engine download intents carry `needs_post_min_short_side_check` for media
 `run_account_pipeline` ignores `DownloadResult` status values, so runs are marked DONE even if every download fails (e.g., bad cookies or repeated 404/429 responses). Because errors are swallowed inside `MediaDownloader` and only recorded on the result, the scheduler never surfaces failures, leaving the UI to report success while no media are saved. Propagate failed results or raise when any download fails so run status reflects the real outcome.
 ---review-end---
 
+## Code Review - T-20260113-act-007-lifecycle-start-continue-cancel - 2026-01-13T20:10:00Z
+
+---review-start---
+[P2] Cancel-delete silently ignores backend errors  
+When cancelling a running task with the Delete option, the UI calls `/api/lifecycle/prepare-cancel` but never checks the response status, so backend failures (e.g., permission errors returning 500) leave files on disk while the page reports a successful cancel. Surface non-2xx responses so users know the cleanup did not complete.
+---review-end---
+
 ## Code Review Follow-ups（处理进展）
 
 - [DONE] [P1] Render settings UI when initial fetch fails（已修复：`GlobalSettingsPanel.load()` 在 non-2xx/exception 时会设置错误 banner 并调用 `_render()` 渲染默认表单；见 `src/frontend/settings/GlobalSettings.js`）。

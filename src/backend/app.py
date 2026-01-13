@@ -11,6 +11,8 @@ from .scheduler.scheduler import Scheduler
 from .settings.api import create_settings_router
 from .settings.store import SettingsStore
 from .pipeline.account_runner import create_account_runner
+from .fs import AccountStorageManager
+from .lifecycle.api import create_lifecycle_router
 
 
 def _repo_root() -> Path:
@@ -29,16 +31,22 @@ def create_app() -> FastAPI:
     runner = create_account_runner(store=store)
     scheduler = Scheduler(config=scheduler_config, runs_dir=runs_dir, runner=runner)
 
+    # Create storage manager for lifecycle operations
+    download_root = Path(store.load().download_root or (repo_root / "downloads"))
+    storage = AccountStorageManager(download_root=download_root)
+
     app = FastAPI(title="x-media-collector-local")
     app.include_router(
         create_settings_router(store=store, scheduler_config=scheduler_config, scheduler=scheduler, repo_root=repo_root)
     )
     app.include_router(create_scheduler_router(scheduler=scheduler))
+    app.include_router(create_lifecycle_router(storage=storage))
 
     app.state.settings_store = store
     app.state.scheduler_config = scheduler_config
     app.state.scheduler = scheduler
     app.state.repo_root = repo_root
+    app.state.storage = storage
 
     app.mount("/", StaticFiles(directory=str(frontend_dir), html=True), name="frontend")
     return app

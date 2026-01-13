@@ -172,7 +172,74 @@ class AccountRow {
     }
     const handle = this._validation.handle;
     const config = this.getConfig() || {};
-    this._startOrContinue(kind, { handle, config });
+
+    if (kind === "start") {
+      // For Start New, check if there are existing files first
+      this._checkExistingAndStart(handle, config);
+    } else {
+      // For Continue, proceed directly
+      this._startOrContinue(kind, { handle, config });
+    }
+  }
+
+  async _checkExistingAndStart(handle, config) {
+    try {
+      // Check for existing files
+      const res = await fetch(`/api/lifecycle/check/${encodeURIComponent(handle)}`);
+      if (!res.ok) {
+        const detail = await this._readError(res);
+        this.reasonEl.textContent = `检查失败（HTTP ${res.status}）：${detail}`;
+        return;
+      }
+
+      const info = await res.json();
+
+      if (info.has_files) {
+        // Show the Start New modal with three options
+        const modal = ConfirmModals.showStartNewModal({
+          handle,
+          imageCount: info.image_count,
+          videoCount: info.video_count,
+          onConfirm: async (mode) => {
+            // Prepare (delete/pack) then start
+            await this._prepareAndStart(handle, config, mode);
+          },
+          onCancel: () => {
+            // User cancelled, do nothing
+          },
+        });
+        document.body.appendChild(modal);
+      } else {
+        // No existing files, start directly
+        this._startOrContinue("start", { handle, config });
+      }
+    } catch (err) {
+      const message = err?.message ? String(err.message) : String(err);
+      this.reasonEl.textContent = `检查失败（${message}）`;
+    }
+  }
+
+  async _prepareAndStart(handle, config, mode) {
+    try {
+      // Perform the prepare operation (delete/pack/ignore)
+      const prepRes = await fetch("/api/lifecycle/prepare-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle, mode }),
+      });
+
+      if (!prepRes.ok) {
+        const detail = await this._readError(prepRes);
+        this.reasonEl.textContent = `准备失败（HTTP ${prepRes.status}）：${detail}`;
+        return;
+      }
+
+      // Now start the task
+      this._startOrContinue("start", { handle, config });
+    } catch (err) {
+      const message = err?.message ? String(err.message) : String(err);
+      this.reasonEl.textContent = `准备失败（${message}）`;
+    }
   }
 
   async _startOrContinue(kind, { handle, config }) {
@@ -206,7 +273,27 @@ class AccountRow {
     const handle = this._validation.handle;
     if (!handle) return;
 
+    if (this._taskStatus === TaskStatus.RUNNING) {
+      // Running tasks require confirmation with Keep/Delete options
+      const modal = ConfirmModals.showCancelRunningModal({
+        handle,
+        onConfirm: async (mode) => {
+          await this._performCancel(handle, mode);
+        },
+        onCancel: () => {
+          // User cancelled the dialog, do nothing
+        },
+      });
+      document.body.appendChild(modal);
+    } else {
+      // Queued tasks cancel immediately without modal
+      await this._performCancel(handle, null);
+    }
+  }
+
+  async _performCancel(handle, cancelMode) {
     try {
+      // First cancel the task in the scheduler
       const res = await fetch("/api/scheduler/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,6 +307,25 @@ class AccountRow {
       const data = await res.json();
       this._queuedPosition = data.queued_position ?? null;
       this.setTaskStatus(data.status);
+
+      // If a cancel mode was specified and it's DELETE, clean up files
+      if (cancelMode === ConfirmModals.CancelMode.DELETE) {
+        try {
+          const cleanupRes = await fetch("/api/lifecycle/prepare-cancel", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ handle, mode: cancelMode }),
+          });
+          if (!cleanupRes.ok) {
+            const detail = await this._readError(cleanupRes);
+            this.reasonEl.textContent = `任务已取消，但删除文件失败（HTTP ${cleanupRes.status}）：${detail}`;
+          }
+        } catch (cleanupErr) {
+          // Log but don't fail the cancel operation
+          console.error("Cleanup failed:", cleanupErr);
+          this.reasonEl.textContent = `任务已取消，但删除文件失败：${cleanupErr.message || cleanupErr}`;
+        }
+      }
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
       this.reasonEl.textContent = `取消失败（${message}）`;
