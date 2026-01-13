@@ -43,3 +43,19 @@
 [P1] Render settings UI when initial fetch fails  
 If the initial `/api/settings` request returns non-2xx (or throws), `load()` returns without calling `_render`, leaving all settings blocks empty and preventing users from entering credentials or other values. Because the UI never renders any form after the first failure, the user cannot recover (even if the backend comes back) without a full page reload. Consider rendering default fields and showing the error banner so the page remains usable after transient API errors.
 ---review-end---
+
+## Code Review - T-20260113-act-002-spike-cookie-scrape - 2026-01-13T13:25:21Z
+
+---review-start---
+[P2] Close mkstemp file descriptor to avoid leaks  
+`_download_with_retries` uses `tempfile.mkstemp` but never closes the returned file descriptor before re-opening the path. Repeated downloads leave fds open and can exhaust the process limit, causing later downloads or logging to fail unexpectedly; close the descriptor (or use `NamedTemporaryFile`) before writing.
+[P2] Re-adding fixed username breaks persistent runs  
+Each run unconditionally calls `api.pool.add_account` with the same default username (`xmc_cookie`). When using a persistent `--accounts-db`, rerunning the script raises a duplicate-username constraint error and aborts scraping despite valid credentials. Check for an existing account or update/replace it instead of blindly inserting.
+---review-end---
+
+## Code Review Follow-ups（处理进展）
+
+- [DONE] [P1] Render settings UI when initial fetch fails（已修复：`GlobalSettingsPanel.load()` 在 non-2xx/exception 时会设置错误 banner 并调用 `_render()` 渲染默认表单；见 `src/frontend/settings/GlobalSettings.js`）。
+- [DONE] [P2] Close mkstemp file descriptor to avoid leaks（已修复：`tempfile.mkstemp` 返回的 fd 在写入前显式 `close`；见 `scripts/spike_scrape_sample.py`）。
+- [DONE] [P2] Re-adding fixed username breaks persistent runs（已修复：持久化 `--accounts-db` 时若已存在同名账号则更新 cookies/user-agent，避免 username 唯一约束导致任务中断；见 `scripts/spike_scrape_sample.py`）。
+- [RECORD] `record.json` 已同步更新：`T-20260113-act-002-spike-cookie-scrape.updated_at = 2026-01-13T13:54:29Z`。

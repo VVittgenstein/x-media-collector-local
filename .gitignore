@@ -1,0 +1,15 @@
+# Local runtime state (may contain secrets)
+data/
+downloads/
+accounts.db
+*.db
+
+# Spike outputs (may contain tweet text/media)
+artifacts/spike_downloads/
+artifacts/samples/run_*.json
+artifacts/samples/run_*.jsonl
+
+# Python caches
+__pycache__/
+*.py[cod]
+

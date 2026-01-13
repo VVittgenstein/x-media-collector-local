@@ -235,7 +235,7 @@
       "seed_id": "ACT-002",
       "title": "Spike：用登录 Cookies 访问 X 内部接口并抓取媒体推文样本",
       "type": "research",
-      "summary": "验证核心抓取路径可行性与风控阈值，并收集真实响应样本用于字段解析、视频/分辨率元数据与限流策略校准。[EVID-002][EVID-003][EVID-004]",
+      "summary": "落地可运行的 Spike 脚本（twscrape + 登录 Cookie）用于拉取 UserMedia 并下载媒体，支持 `--accounts-db` 持久化复用（重复运行会更新账号 Cookie，不因 username 冲突中断）；同时提供 3 份脱敏/裁剪后的 GraphQL JSON 响应样本，用于字段解析、视频/分辨率元数据与限流策略校准。[EVID-002][EVID-003][EVID-004]",
       "acceptance_draft": [
         "在有效凭证下，成功获取目标账号至少 50 条含媒体推文并下载落盘样本",
         "记录错误类型（如 429/401/403）、重试结果与耗时，并沉淀最小可复现日志（需脱敏）",
@@ -244,38 +244,13 @@
       ],
       "lane": "now",
       "priority_suggested": "P0",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-design-credential-input-format"
       ],
-      "blocked": true,
-      "blocked_by": [
-        {
-          "dep_id": "DEP-001",
-          "name": "用户提供的 X 已登录会话凭证（Cookies/Token）",
-          "type": "access",
-          "status": "pending",
-          "doc_url": "",
-          "note": "无有效凭证会导致认证失败，无法验证抓取路径。"
-        },
-        {
-          "dep_id": "DEP-002",
-          "name": "X 网页内部接口可用性（GraphQL/内部端点）",
-          "type": "api",
-          "status": "unknown",
-          "doc_url": "",
-          "note": "接口可能变更/限流/封锁，需通过 Spike 校准可用性与字段。"
-        },
-        {
-          "dep_id": "DEP-003",
-          "name": "twscrape 开源库（或同类 GraphQL 抓取库）",
-          "type": "lib",
-          "status": "approved",
-          "doc_url": "https://pypi.org/project/twscrape/",
-          "note": "优先集成开源库以降低 doc_id 等变动维护成本。"
-        }
-      ],
-      "unblock_plan": "先由用户提供可用的 auth_token/ct0 等会话信息；若抓取失败，按\"降低频率/启用代理/升级抓取库/切换方案\"逐步排障并记录结论。",
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
       "estimate_h": 6,
       "interfaces_touched": [
         "scrape-layer",
@@ -283,8 +258,10 @@
         "error taxonomy"
       ],
       "artifacts": [
-        "scripts/spike_scrape_sample.*",
-        "artifacts/samples/x_timeline_*.json"
+        "scripts/spike_scrape_sample.py",
+        "artifacts/samples/x_timeline_user_media_sample.json",
+        "artifacts/samples/x_timeline_user_by_login_sample.json",
+        "artifacts/samples/x_timeline_user_by_id_sample.json"
       ],
       "citations": [
         "EVID-002",
@@ -292,11 +269,13 @@
         "EVID-004"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T13:54:29Z",
+      "owner": "codex",
       "tags": [
         "seed:ACT-002",
-        "blocked"
+        "research",
+        "spike",
+        "review-fix"
       ]
     },
 

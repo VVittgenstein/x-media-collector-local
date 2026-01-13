@@ -48,6 +48,6 @@
 ## 5) 显式限制 / 风险 / 未完成 TODO
 
 - [LIMIT] 当前 Start/Continue 仅为前端最小骨架按钮（用于验证全局设置联动）；真实任务启动/队列/状态机将在后续任务交付。
+- [DONE]（Code Review P1）`/api/settings` 初次加载失败时仍会渲染默认表单并展示错误提示，后端短暂异常后用户无需刷新也能继续输入/保存设置（见 `src/frontend/settings/GlobalSettings.js` 的 `load()`）。
 - [LIMIT] 后端依赖 FastAPI/Uvicorn，已写入 `requirements.txt`，但本仓库运行环境需自行安装依赖后才能启动 Web 服务。
 - [RISK] `data/config.json` 明文保存凭证（符合已拍板 ADR-0003）；需在后续 README/风险提示中再次强调不要分享该文件。
-
