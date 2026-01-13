@@ -81,6 +81,20 @@ Filter engine download intents carry `needs_post_min_short_side_check` for media
 When cancelling a running task with the Delete option, the UI calls `/api/lifecycle/prepare-cancel` but never checks the response status, so backend failures (e.g., permission errors returning 500) leave files on disk while the page reports a successful cancel. Surface non-2xx responses so users know the cleanup did not complete.
 ---review-end---
 
+## Code Review - T-20260113-act-012-ignore-history-replace-rule - 2026-01-13T20:25:00Z
+
+---review-start---
+[P1] Delete old file before new write risks data loss  
+Algorithm step 4 deletes the existing file as soon as the hash matches and only then writes the new media (steps 4–5). If the new download or write fails (network error, disk full, permission issue), the historical file is already removed and the content is irrecoverably lost; the note later in the ADR says deletion should happen only when the new file is safe, so the current sequence violates that requirement. Consider writing to a temp path and atomically replacing, or at least writing successfully before deleting.
+---review-end---
+
+## Code Review - T-20260113-act-012-ignore-history-replace-rule - 2026-01-13T20:40:00Z
+
+---review-start---
+[P1] Cross-run rule still says delete before writing  
+In the ADR decision section the cross-run semantics still read \"删除历史文件，保存新文件\" when hashes match, which instructs deletion before ensuring the new write succeeds. The algorithm section below fixes the ordering (write temp/rename first, then delete) and the record claims the data-loss bug is resolved, so leaving the decision text unchanged risks reintroducing delete-first behavior if implementers follow the earlier rule. Update the decision wording to match the safe write-before-delete flow.
+---review-end---
+
 ## Code Review Follow-ups（处理进展）
 
 - [DONE] [P1] Render settings UI when initial fetch fails（已修复：`GlobalSettingsPanel.load()` 在 non-2xx/exception 时会设置错误 banner 并调用 `_render()` 渲染默认表单；见 `src/frontend/settings/GlobalSettings.js`）。
