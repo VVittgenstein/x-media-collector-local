@@ -328,13 +328,13 @@
       "summary": "训练数据采集的关键产物在落盘规则：固定目录结构、文件名包含 tweetId、内容 hash 去重（first wins）与重复统计口径。[EVID-001]",
       "acceptance_draft": [
         "账号目录结构固定：`<root>/<handle>/images/` 与 `<root>/<handle>/videos/`",
-        "命名符合 `<tweetId>_<YYYY-MM-DD><hash6>.<ext>`，日期来自 created_at，hash6 来自下载后内容 hash",
+        "命名符合 `<tweetId>_<YYYY-MM-DD>_<hash6>.<ext>`，日期来自 created_at，hash6 来自下载后内容 hash",
         "账号内按内容 hash 去重，first wins：后遇到的重复媒体删除新下载临时文件并计入 `skipped_duplicate`",
         "遍历顺序支持\"从新到旧\"串行处理以保证 first wins 可解释"
       ],
       "lane": "now",
       "priority_suggested": "P0",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-004-global-settings"
       ],
@@ -349,15 +349,22 @@
         "dedup-index"
       ],
       "artifacts": [
-        "src/backend/downloader/*",
-        "src/backend/fs/*"
+        "src/backend/fs/__init__.py",
+        "src/backend/fs/storage.py",
+        "src/backend/fs/naming.py",
+        "src/backend/fs/hashing.py",
+        "src/backend/downloader/__init__.py",
+        "src/backend/downloader/dedup.py",
+        "src/backend/downloader/downloader.py",
+        "tests/downloader/__init__.py",
+        "tests/downloader/test_naming_dedup.py"
       ],
       "citations": [
         "EVID-001"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T15:55:00Z",
+      "owner": "codex",
       "tags": [
         "seed:ACT-008"
       ]
