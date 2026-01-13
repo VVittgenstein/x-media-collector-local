@@ -1,4 +1,4 @@
-/* global AccountRowUrlInput, GlobalSettingsPanel, AccountRowConfig, configClipboard */
+/* global fetch, AccountRowUrlInput, GlobalSettingsPanel, AccountRowConfig, configClipboard */
 
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
@@ -21,7 +21,7 @@ const TaskStatus = {
   IDLE: "Idle",
   QUEUED: "Queued",
   RUNNING: "Running",
-  COMPLETED: "Completed",
+  DONE: "Done",
   CANCELLED: "Cancelled",
   FAILED: "Failed",
 };
@@ -41,6 +41,7 @@ class AccountRow {
     this.getSettings = getSettings;
     this._validation = { valid: false, handle: null, error: "URL 不能为空" };
     this._taskStatus = TaskStatus.IDLE;
+    this._queuedPosition = null;
     this._unsubscribeClipboard = null;
     this._render();
   }
@@ -52,7 +53,12 @@ class AccountRow {
     const urlContainer = el("div", { style: "flex: 1;" });
     this.urlInput = new AccountRowUrlInput(urlContainer, {
       onValidationChange: (result) => {
+        const prevHandle = this._validation?.handle;
         this._validation = result;
+        if (!isLockedStatus(this._taskStatus) && prevHandle && prevHandle !== result.handle) {
+          this._taskStatus = TaskStatus.IDLE;
+          this._queuedPosition = null;
+        }
         this._updateGating();
       },
     });
@@ -68,8 +74,14 @@ class AccountRow {
       text: "Continue",
       onclick: () => this._onStart("continue"),
     });
+    this.cancelBtn = el("button", {
+      class: "btn btn-danger",
+      text: "Cancel",
+      onclick: () => this._onCancel(),
+    });
     actions.appendChild(this.startBtn);
     actions.appendChild(this.continueBtn);
+    actions.appendChild(this.cancelBtn);
 
     row.appendChild(urlContainer);
     row.appendChild(actions);
@@ -158,8 +170,60 @@ class AccountRow {
       this.reasonEl.textContent = this._validation.error || "URL 无效";
       return;
     }
-    this._setStatus("Not Implemented", "btn");
-    this.reasonEl.textContent = `已通过本地前置校验（${kind}）：调度器/Runner 尚未实现`;
+    const handle = this._validation.handle;
+    const config = this.getConfig() || {};
+    this._startOrContinue(kind, { handle, config });
+  }
+
+  async _startOrContinue(kind, { handle, config }) {
+    const endpoint = kind === "continue" ? "/api/scheduler/continue" : "/api/scheduler/start";
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: handle, account_config: config }),
+      });
+      if (!res.ok) {
+        const detail = await this._readError(res);
+        if (res.status === 409) {
+          this.reasonEl.textContent = `该账号已有活跃任务：${detail}`;
+          return;
+        }
+        this.reasonEl.textContent = `启动失败（HTTP ${res.status}）：${detail}`;
+        return;
+      }
+      const data = await res.json();
+      this._queuedPosition = data.queued_position ?? null;
+      this.setTaskStatus(data.status);
+    } catch (err) {
+      const message = err?.message ? String(err.message) : String(err);
+      this.reasonEl.textContent = `启动失败（${message}）`;
+    }
+  }
+
+  async _onCancel() {
+    if (!isLockedStatus(this._taskStatus)) return;
+    const handle = this._validation.handle;
+    if (!handle) return;
+
+    try {
+      const res = await fetch("/api/scheduler/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle }),
+      });
+      if (!res.ok) {
+        const detail = await this._readError(res);
+        this.reasonEl.textContent = `取消失败（HTTP ${res.status}）：${detail}`;
+        return;
+      }
+      const data = await res.json();
+      this._queuedPosition = data.queued_position ?? null;
+      this.setTaskStatus(data.status);
+    } catch (err) {
+      const message = err?.message ? String(err.message) : String(err);
+      this.reasonEl.textContent = `取消失败（${message}）`;
+    }
   }
 
   _setStatus(text, className = "pill") {
@@ -173,6 +237,7 @@ class AccountRow {
    */
   setTaskStatus(status) {
     this._taskStatus = status;
+    if (!isLockedStatus(status)) this._queuedPosition = null;
     this._updateGating();
     // 更新配置组件锁定状态
     if (this.configComponent) {
@@ -186,6 +251,16 @@ class AccountRow {
    */
   getTaskStatus() {
     return this._taskStatus;
+  }
+
+  getHandle() {
+    return this._validation?.valid ? this._validation.handle : null;
+  }
+
+  applyBackendState(state) {
+    if (!state || state.handle !== this._validation.handle) return;
+    this._queuedPosition = state.queued_position ?? null;
+    this.setTaskStatus(state.status);
   }
 
   /**
@@ -216,7 +291,11 @@ class AccountRow {
 
     if (isLocked) {
       disabled = true;
-      reason = this._taskStatus === TaskStatus.QUEUED ? "任务排队中" : "任务运行中";
+      if (this._taskStatus === TaskStatus.QUEUED && this._queuedPosition) {
+        reason = `任务排队中（#${this._queuedPosition}）`;
+      } else {
+        reason = this._taskStatus === TaskStatus.QUEUED ? "任务排队中" : "任务运行中";
+      }
     } else if (!credsOk) {
       disabled = true;
       reason = "凭证未配置：请先在 Global Settings 中填写 auth_token/ct0";
@@ -227,6 +306,7 @@ class AccountRow {
 
     this.startBtn.disabled = disabled;
     this.continueBtn.disabled = disabled;
+    this.cancelBtn.disabled = !isLocked;
     this.reasonEl.textContent = reason;
 
     // 更新状态标签
@@ -237,7 +317,7 @@ class AccountRow {
     } else {
       // 非锁定且非禁用状态：显示完成/取消/失败/空闲
       const statusClassMap = {
-        [TaskStatus.COMPLETED]: "completed",
+        [TaskStatus.DONE]: "completed",
         [TaskStatus.CANCELLED]: "cancelled",
         [TaskStatus.FAILED]: "failed",
         [TaskStatus.IDLE]: "",
@@ -249,6 +329,20 @@ class AccountRow {
     // 锁定时禁用 URL 输入
     if (this.urlInput) {
       this.urlInput.setDisabled(isLocked);
+    }
+  }
+
+  async _readError(res) {
+    try {
+      const data = await res.json();
+      if (typeof data?.detail === "string") return data.detail;
+      return JSON.stringify(data);
+    } catch (e) {
+      try {
+        return await res.text();
+      } catch (e2) {
+        return "未知错误";
+      }
     }
   }
 
@@ -269,6 +363,7 @@ class AccountsPanel {
     this.getSettings = getSettings;
     this.rows = [];
     this._render();
+    this._startSchedulerPolling();
   }
 
   _render() {
@@ -292,6 +387,34 @@ class AccountsPanel {
 
   refreshGating() {
     for (const row of this.rows) row._updateGating();
+  }
+
+  _startSchedulerPolling() {
+    const tick = async () => {
+      let data = null;
+      try {
+        const res = await fetch("/api/scheduler/state");
+        if (!res.ok) return;
+        data = await res.json();
+      } catch (e) {
+        return;
+      }
+
+      const byHandle = new Map();
+      for (const h of data?.handles || []) {
+        if (h?.handle) byHandle.set(h.handle, h);
+      }
+
+      for (const row of this.rows) {
+        const handle = row.getHandle();
+        if (!handle) continue;
+        const state = byHandle.get(handle);
+        if (state) row.applyBackendState(state);
+      }
+    };
+
+    // 轮询足够支撑本任务验收（SSE 将在后续任务完善）。
+    setInterval(tick, 800);
   }
 }
 

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from ..scheduler.config import SchedulerConfig
+from ..scheduler.scheduler import Scheduler
 from .models import Credentials, GlobalSettings
 from .store import SettingsStore
 
@@ -85,7 +86,9 @@ def _ensure_dir_writable(path: Path) -> None:
         raise ValueError(f"无法写入 Download Root：{exc}") from exc
 
 
-def create_settings_router(*, store: SettingsStore, scheduler_config: SchedulerConfig, repo_root: Path) -> APIRouter:
+def create_settings_router(
+    *, store: SettingsStore, scheduler_config: SchedulerConfig, scheduler: Scheduler, repo_root: Path
+) -> APIRouter:
     router = APIRouter(prefix="/api/settings", tags=["settings"])
 
     @router.get("", response_model=SettingsOut)
@@ -121,13 +124,14 @@ def create_settings_router(*, store: SettingsStore, scheduler_config: SchedulerC
         return _public_settings(updated)
 
     @router.post("/max-concurrent", response_model=SettingsOut)
-    def set_max_concurrent(body: MaxConcurrentIn) -> SettingsOut:
+    async def set_max_concurrent(body: MaxConcurrentIn) -> SettingsOut:
         try:
             scheduler_config.set_max_concurrent(body.max_concurrent)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         updated = store.set_value(key="max_concurrent", value=body.max_concurrent)
+        await scheduler.reschedule()
         return _public_settings(updated)
 
     return router
