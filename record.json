@@ -438,7 +438,7 @@
       ],
       "lane": "now",
       "priority_suggested": "P1",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-002-spike-cookie-scrape"
       ],
@@ -458,11 +458,12 @@
         "EVID-002"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T18:30:00Z",
+      "owner": "codex",
       "tags": [
         "research"
-      ]
+      ],
+      "completion_notes": "分析了 Spike 样本中的视频字段形态：1) m3u8 流媒体 (application/x-mpegURL) 2) 多码率 MP4 直链 (256k/832k/2176k)。确定下载策略：优先最高码率 MP4，降级使用 ffmpeg 处理 m3u8。定义了视频下载失败的计数字段 (videos_failed) 和错误类型 (NETWORK_ERROR/FFMPEG_ERROR/NO_VARIANT/INCOMPLETE)。"
     },
 
     "T-20260113-act-006-scheduler-fifo-locking": {
