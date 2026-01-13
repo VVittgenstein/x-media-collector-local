@@ -8,10 +8,9 @@ Acceptance criteria from T-20260113-test-naming-dedup:
 """
 
 import tempfile
+import unittest
 from datetime import datetime
 from pathlib import Path
-
-import pytest
 
 # Add src to path for imports
 import sys
@@ -38,7 +37,7 @@ from backend.downloader.downloader import (
 )
 
 
-class TestNaming:
+class TestNaming(unittest.TestCase):
     """Tests for file naming conventions."""
 
     def test_generate_filename_format(self):
@@ -113,19 +112,19 @@ class TestNaming:
 
     def test_hash6_must_be_6_chars(self):
         """hash6 must be exactly 6 characters."""
-        with pytest.raises(ValueError, match="exactly 6"):
+        with self.assertRaisesRegex(ValueError, "exactly 6"):
             generate_media_filename("123", datetime.now(), "abc", "jpg")
 
-        with pytest.raises(ValueError, match="exactly 6"):
+        with self.assertRaisesRegex(ValueError, "exactly 6"):
             generate_media_filename("123", datetime.now(), "abcdefg", "jpg")
 
     def test_hash6_must_be_hex(self):
         """hash6 must be hexadecimal."""
-        with pytest.raises(ValueError, match="hexadecimal"):
+        with self.assertRaisesRegex(ValueError, "hexadecimal"):
             generate_media_filename("123", datetime.now(), "ghijkl", "jpg")
 
 
-class TestHashing:
+class TestHashing(unittest.TestCase):
     """Tests for content hashing."""
 
     def test_hash6_equals_first_6_chars(self):
@@ -175,7 +174,7 @@ class TestHashing:
         assert hasher.hash6() == compute_hash6(compute_bytes_hash(content))
 
 
-class TestDedup:
+class TestDedup(unittest.TestCase):
     """Tests for deduplication logic."""
 
     def test_first_content_is_new(self):
@@ -244,7 +243,7 @@ class TestDedup:
             assert result.result == DedupResult.DUPLICATE
 
 
-class TestDownloaderDedup:
+class TestDownloaderDedup(unittest.TestCase):
     """Tests for downloader with deduplication."""
 
     def test_first_wins_keeps_first_download(self):
@@ -410,7 +409,7 @@ class TestDownloaderDedup:
             assert results[2].status == DownloadStatus.SKIPPED_DUPLICATE
 
 
-class TestStorageDirectory:
+class TestStorageDirectory(unittest.TestCase):
     """Tests for storage directory structure."""
 
     def test_account_directory_structure(self):

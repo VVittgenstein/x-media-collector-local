@@ -110,6 +110,9 @@ class MediaIntent:
     created_at: datetime
     media_type: MediaType
     extension: Optional[str] = None  # If None, inferred from URL
+    width: Optional[int] = None
+    height: Optional[int] = None
+    needs_post_min_short_side_check: bool = False
 
     def get_extension(self) -> str:
         """Get the file extension, inferring from URL if needed."""

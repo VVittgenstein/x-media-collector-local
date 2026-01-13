@@ -10,6 +10,7 @@ from .scheduler.api import create_scheduler_router
 from .scheduler.scheduler import Scheduler
 from .settings.api import create_settings_router
 from .settings.store import SettingsStore
+from .pipeline.account_runner import create_account_runner
 
 
 def _repo_root() -> Path:
@@ -25,7 +26,8 @@ def create_app() -> FastAPI:
 
     store = SettingsStore(path=config_path)
     scheduler_config = SchedulerConfig(max_concurrent=store.load().max_concurrent)
-    scheduler = Scheduler(config=scheduler_config, runs_dir=runs_dir)
+    runner = create_account_runner(store=store)
+    scheduler = Scheduler(config=scheduler_config, runs_dir=runs_dir, runner=runner)
 
     app = FastAPI(title="x-media-collector-local")
     app.include_router(

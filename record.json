@@ -528,7 +528,7 @@
       ],
       "lane": "now",
       "priority_suggested": "P0",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-002-spike-cookie-scrape",
         "T-20260113-act-004-global-settings",
@@ -545,18 +545,25 @@
         "downloader integration"
       ],
       "artifacts": [
-        "src/backend/scraper/*",
-        "src/backend/pipeline/account_runner.*"
+        "src/backend/scraper/__init__.py",
+        "src/backend/scraper/user_media_parser.py",
+        "src/backend/scraper/twscrape_scraper.py",
+        "src/backend/pipeline/account_runner.py",
+        "src/backend/downloader/downloader.py",
+        "src/backend/app.py",
+        "tests/pipeline/test_account_runner.py",
+        "tests/scraper/test_user_media_parser.py"
       ],
       "citations": [
         "EVID-001",
         "EVID-002"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-13T18:47:02Z",
+      "owner": "codex",
       "tags": [
-        "seed:ACT-009"
+        "seed:ACT-009",
+        "review-fix"
       ]
     },
 

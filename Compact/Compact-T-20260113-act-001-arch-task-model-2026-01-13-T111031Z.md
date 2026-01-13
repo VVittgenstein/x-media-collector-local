@@ -60,9 +60,26 @@ Each run unconditionally calls `api.pool.add_account` with the same default user
 `validate_x_url` only rejects when `parsed.query` is non-empty, so `https://x.com/user?` is treated as valid even though the contract forbids any query params; this leaves malformed URLs accepted by both client and server validation paths.
 ---review-end---
 
+## Code Review - T-20260113-act-009-scrape-and-apply-filters - 2026-01-13T18:06:00Z
+
+---review-start---
+[P1] Propagate min_short_side post-check flags to downloader  
+Filter engine download intents carry `needs_post_min_short_side_check` for media lacking dimensions, but `run_account_pipeline` rebuilds `MediaIntent` without preserving width/height or the post-check flag. With `min_short_side` configured, such media are always downloaded and never revalidated, so undersized files slip through. Preserve these fields through to the downloader so post-download size checks can enforce the filter.
+---review-end---
+
+## Code Review - T-20260113-act-009-scrape-and-apply-filters - 2026-01-13T19:45:00Z
+
+---review-start---
+[P1] Pipeline reports success despite download failures  
+`run_account_pipeline` ignores `DownloadResult` status values, so runs are marked DONE even if every download fails (e.g., bad cookies or repeated 404/429 responses). Because errors are swallowed inside `MediaDownloader` and only recorded on the result, the scheduler never surfaces failures, leaving the UI to report success while no media are saved. Propagate failed results or raise when any download fails so run status reflects the real outcome.
+---review-end---
+
 ## Code Review Follow-ups（处理进展）
 
 - [DONE] [P1] Render settings UI when initial fetch fails（已修复：`GlobalSettingsPanel.load()` 在 non-2xx/exception 时会设置错误 banner 并调用 `_render()` 渲染默认表单；见 `src/frontend/settings/GlobalSettings.js`）。
 - [DONE] [P2] Close mkstemp file descriptor to avoid leaks（已修复：`tempfile.mkstemp` 返回的 fd 在写入前显式 `close`；见 `scripts/spike_scrape_sample.py`）。
 - [DONE] [P2] Re-adding fixed username breaks persistent runs（已修复：持久化 `--accounts-db` 时若已存在同名账号则更新 cookies/user-agent，避免 username 唯一约束导致任务中断；见 `scripts/spike_scrape_sample.py`）。
+- [DONE] [P1] Propagate min_short_side post-check flags to downloader（已修复：Runner 透传 Filter Engine intent 的 `width/height/needs_post_min_short_side_check` 到 downloader；见 `src/backend/pipeline/account_runner.py`、`src/backend/downloader/downloader.py`；并补充回归测试 `tests/pipeline/test_account_runner.py`）。
+- [DONE] [P1] Pipeline reports success despite download failures（已修复：Runner 收集 `DownloadResult` 并在任一 `FAILED` 时抛错，使 Scheduler 将 run 标记为 `FAILED`；见 `src/backend/pipeline/account_runner.py`；并补充回归测试 `tests/pipeline/test_account_runner.py`）。
 - [RECORD] `record.json` 已同步更新：`T-20260113-act-002-spike-cookie-scrape.updated_at = 2026-01-13T13:54:29Z`。
+- [RECORD] `record.json` 已同步更新：`T-20260113-act-009-scrape-and-apply-filters.updated_at = 2026-01-13T18:47:02Z`。
