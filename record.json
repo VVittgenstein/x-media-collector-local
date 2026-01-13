@@ -18,7 +18,7 @@
       "seed_id": "ACT-001",
       "title": "确定后端架构与异步任务模型（WebUI + 任务队列）",
       "type": "design",
-      "summary": "先拍板技术栈与任务执行模型，以支撑"账号级并发 + FIFO 队列 + 锁定/状态展示"的产品行为与后续抓取/落盘实现。[EVID-001][EVID-002]",
+      "summary": "先拍板技术栈与任务执行模型，以支撑\"账号级并发 + FIFO 队列 + 锁定/状态展示\"的产品行为与后续抓取/落盘实现。[EVID-001][EVID-002]",
       "acceptance_draft": [
         "给出后端/前端技术栈选择与理由（优先满足本地部署、一键启动、可维护）",
         "定义任务调度模型：MaxConcurrent 默认 3、FIFO、账号级串行、Queued/Running 锁定规则",
@@ -144,12 +144,12 @@
       "seed_id": "",
       "title": "实现过滤与分类规则的纯逻辑层（可用 JSON fixture 回归）",
       "type": "build",
-      "summary": "把"日期/媒体类型/来源类型/Reply+Quote 开关/MIN_SHORT_SIDE"等规则固化为可测试的纯函数，便于抓取层变化时复用。[EVID-001][EVID-002]",
+      "summary": "把\"日期/媒体类型/来源类型/Reply+Quote 开关/MIN_SHORT_SIDE\"等规则固化为可测试的纯函数，便于抓取层变化时复用。[EVID-001][EVID-002]",
       "acceptance_draft": [
         "实现推文分类：Reply 优先归 Reply；Quote 仅指非 Reply 且存在引用关系",
         "实现筛选：日期闭区间、媒体类型（images/videos/both）、来源类型多选、Reply+Quote 开关行为",
         "实现 MIN_SHORT_SIDE 过滤：低于阈值的媒体不进入下载意图列表（并返回可计数的过滤原因）",
-        "提供至少 5 个 fixture 用例，断言输出的"下载意图列表"稳定可复现"
+        "提供至少 5 个 fixture 用例，断言输出的\"下载意图列表\"稳定可复现"
       ],
       "lane": "now",
       "priority_suggested": "P0",
@@ -191,7 +191,7 @@
       "type": "build",
       "summary": "全局设置决定任务能否启动与落盘路径，且涉及敏感信息处理与默认并发策略（默认 3）。[EVID-001][EVID-002]",
       "acceptance_draft": [
-        "提供全局凭证输入与保存：保存后仅显示"已设置"，不回显明文",
+        "提供全局凭证输入与保存：保存后仅显示\"已设置\"，不回显明文",
         "未配置凭证时，所有账号行的 Start/Continue 被阻止并提示原因",
         "Download Root 可配置并用于后续落盘；Root 不可写时给出明确错误",
         "Max Concurrent 默认 3，可修改并即时影响调度器"
@@ -275,7 +275,7 @@
           "note": "优先集成开源库以降低 doc_id 等变动维护成本。"
         }
       ],
-      "unblock_plan": "先由用户提供可用的 auth_token/ct0 等会话信息；若抓取失败，按"降低频率/启用代理/升级抓取库/切换方案"逐步排障并记录结论。",
+      "unblock_plan": "先由用户提供可用的 auth_token/ct0 等会话信息；若抓取失败，按\"降低频率/启用代理/升级抓取库/切换方案\"逐步排障并记录结论。",
       "estimate_h": 6,
       "interfaces_touched": [
         "scrape-layer",
@@ -348,7 +348,7 @@
         "账号目录结构固定：`<root>/<handle>/images/` 与 `<root>/<handle>/videos/`",
         "命名符合 `<tweetId>_<YYYY-MM-DD><hash6>.<ext>`，日期来自 created_at，hash6 来自下载后内容 hash",
         "账号内按内容 hash 去重，first wins：后遇到的重复媒体删除新下载临时文件并计入 `skipped_duplicate`",
-        "遍历顺序支持"从新到旧"串行处理以保证 first wins 可解释"
+        "遍历顺序支持\"从新到旧\"串行处理以保证 first wins 可解释"
       ],
       "lane": "now",
       "priority_suggested": "P0",
@@ -514,7 +514,7 @@
       "summary": "把抓取层数据转为符合用户意图的下载集合，并保证同条件下结果稳定可复现（分类/过滤规则严格按文档）。[EVID-001][EVID-002]",
       "acceptance_draft": [
         "使用抓取库获取指定 handle 的媒体推文并支持分页（cursor 或等价机制）",
-        "将抓取结果输入过滤引擎后，输出"下载意图"集合稳定可复现（同条件多次运行一致）",
+        "将抓取结果输入过滤引擎后，输出\"下载意图\"集合稳定可复现（同条件多次运行一致）",
         "Reply/Quote 分类符合规则；Reply+Quote 开关 ON/OFF 的下载集合符合定义",
         "MIN_SHORT_SIDE 生效：被过滤媒体不落盘（仅计入过滤/跳过统计）"
       ],
@@ -644,7 +644,7 @@
       "acceptance_draft": [
         "覆盖：5 个账号 Start + MaxConcurrent=3 -> 3 Running + 2 Queued",
         "覆盖：Running 完成后队首转 Running",
-        "覆盖：Queued Cancel 直接移除且解锁，不触发"Keep/Delete"弹窗路径",
+        "覆盖：Queued Cancel 直接移除且解锁，不触发\"Keep/Delete\"弹窗路径",
         "覆盖：Locked 时配置不可更改/不可 Paste（可用状态断言表达）"
       ],
       "lane": "now",
@@ -898,10 +898,10 @@
       "seed_id": "",
       "title": "补齐 README：一键启动、凭证说明、风险提示与排障路径",
       "type": "doc",
-      "summary": "本地工具的可用性与风险提示是最低要求：需要说明如何启动、如何提供凭证、常见错误（认证失败/429）与"升级依赖/降频/启用代理"的运维路径。[EVID-001][EVID-002][EVID-003]",
+      "summary": "本地工具的可用性与风险提示是最低要求：需要说明如何启动、如何提供凭证、常见错误（认证失败/429）与\"升级依赖/降频/启用代理\"的运维路径。[EVID-001][EVID-002][EVID-003]",
       "acceptance_draft": [
         "README 提供 1 条一键启动路径（含依赖安装与启动命令）",
-        "说明凭证来自用户浏览器，工具不自动获取；明确"已设置"不回显原则",
+        "说明凭证来自用户浏览器，工具不自动获取；明确\"已设置\"不回显原则",
         "显著提示风控/封禁风险与建议（例如使用非主账号、控制频率）",
         "给出抓取失败时的排障步骤：检查凭证->降频->启用代理->升级抓取库"
       ],
@@ -1082,7 +1082,7 @@
   "facts": [
     "账号目录结构固定为 `<root>/<handle>/{images|videos}/`，handle 从严格 URL 解析得出。[EVID-001]",
     "文件命名必须包含 tweetId 与 created_at 日期，并附带内容 hash 前 6 位以支持可追溯与去重。[EVID-001]",
-    "去重按账号目录内"下载后文件内容 hash"判定，first wins（按 created_at 从新到旧串行）。[EVID-001]"
+    "去重按账号目录内\"下载后文件内容 hash\"判定，first wins（按 created_at 从新到旧串行）。[EVID-001]"
   ],
   "decisions": [
     {
@@ -1145,7 +1145,7 @@
     },
     {
       "id": "D-20260113-ignore-replace-by-hash",
-      "summary": "Ignore+Replace 的"相同文件"判定仅按内容 hash，不看文件名。",
+      "summary": "Ignore+Replace 的\"相同文件\"判定仅按内容 hash，不看文件名。",
       "rationale": "内容 hash 是更可靠的重复判定依据，避免因命名规则变化导致误判。",
       "citations": [
         "EVID-001"
