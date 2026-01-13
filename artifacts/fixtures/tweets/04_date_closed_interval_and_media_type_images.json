@@ -1,0 +1,112 @@
+{
+  "id": "04_date_closed_interval_and_media_type_images",
+  "config": {
+    "start_date": "2026-01-05",
+    "end_date": "2026-01-10",
+    "media_type": "images",
+    "source_types": ["Original"],
+    "include_quote_media_in_reply": false,
+    "min_short_side": null
+  },
+  "tweets": [
+    {
+      "tweet_id": "t_before_range",
+      "created_at": "2026-01-04T23:59:59Z",
+      "is_reply": false,
+      "is_retweet": false,
+      "media": [
+        {
+          "media_id": "m_before_1",
+          "kind": "image",
+          "url": "https://example.com/m_before_1.jpg",
+          "width": 900,
+          "height": 700
+        }
+      ]
+    },
+    {
+      "tweet_id": "t_start_day",
+      "created_at": "2026-01-05T00:00:00Z",
+      "is_reply": false,
+      "is_retweet": false,
+      "media": [
+        {
+          "media_id": "m_start_1",
+          "kind": "image",
+          "url": "https://example.com/m_start_1.jpg",
+          "width": 1000,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "tweet_id": "t_end_day",
+      "created_at": "2026-01-10T23:59:59Z",
+      "is_reply": false,
+      "is_retweet": false,
+      "media": [
+        {
+          "media_id": "m_end_img_1",
+          "kind": "image",
+          "url": "https://example.com/m_end_img_1.jpg",
+          "width": 1200,
+          "height": 900
+        },
+        {
+          "media_id": "m_end_vid_1",
+          "kind": "video",
+          "url": "https://example.com/m_end_vid_1.mp4",
+          "width": 1920,
+          "height": 1080
+        }
+      ]
+    },
+    {
+      "tweet_id": "t_after_range",
+      "created_at": "2026-01-11T00:00:00Z",
+      "is_reply": false,
+      "is_retweet": false,
+      "media": [
+        {
+          "media_id": "m_after_1",
+          "kind": "image",
+          "url": "https://example.com/m_after_1.jpg",
+          "width": 1100,
+          "height": 900
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "intents": [
+      {
+        "media_id": "m_end_img_1",
+        "kind": "image",
+        "url": "https://example.com/m_end_img_1.jpg",
+        "width": 1200,
+        "height": 900,
+        "tweet_id": "t_end_day",
+        "tweet_created_at": "2026-01-10T23:59:59Z",
+        "trigger_tweet_id": "t_end_day",
+        "trigger_created_at": "2026-01-10T23:59:59Z",
+        "origin": "self",
+        "needs_post_min_short_side_check": false
+      },
+      {
+        "media_id": "m_start_1",
+        "kind": "image",
+        "url": "https://example.com/m_start_1.jpg",
+        "width": 1000,
+        "height": 800,
+        "tweet_id": "t_start_day",
+        "tweet_created_at": "2026-01-05T00:00:00Z",
+        "trigger_tweet_id": "t_start_day",
+        "trigger_created_at": "2026-01-05T00:00:00Z",
+        "origin": "self",
+        "needs_post_min_short_side_check": false
+      }
+    ],
+    "filtered_counts": {}
+  }
+}
+

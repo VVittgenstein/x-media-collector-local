@@ -1,0 +1,76 @@
+{
+  "id": "05_min_short_side_filter",
+  "config": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-01-31",
+    "media_type": "both",
+    "source_types": ["Original"],
+    "include_quote_media_in_reply": false,
+    "min_short_side": 600
+  },
+  "tweets": [
+    {
+      "tweet_id": "t_min_short_side_1",
+      "created_at": "2026-01-20T12:00:00Z",
+      "is_reply": false,
+      "is_retweet": false,
+      "media": [
+        {
+          "media_id": "m_small_1",
+          "kind": "image",
+          "url": "https://example.com/m_small_1.jpg",
+          "width": 500,
+          "height": 800
+        },
+        {
+          "media_id": "m_exact_1",
+          "kind": "image",
+          "url": "https://example.com/m_exact_1.jpg",
+          "width": 600,
+          "height": 600
+        },
+        {
+          "media_id": "m_unknown_1",
+          "kind": "video",
+          "url": "https://example.com/m_unknown_1.mp4",
+          "width": null,
+          "height": null
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "intents": [
+      {
+        "media_id": "m_exact_1",
+        "kind": "image",
+        "url": "https://example.com/m_exact_1.jpg",
+        "width": 600,
+        "height": 600,
+        "tweet_id": "t_min_short_side_1",
+        "tweet_created_at": "2026-01-20T12:00:00Z",
+        "trigger_tweet_id": "t_min_short_side_1",
+        "trigger_created_at": "2026-01-20T12:00:00Z",
+        "origin": "self",
+        "needs_post_min_short_side_check": false
+      },
+      {
+        "media_id": "m_unknown_1",
+        "kind": "video",
+        "url": "https://example.com/m_unknown_1.mp4",
+        "width": null,
+        "height": null,
+        "tweet_id": "t_min_short_side_1",
+        "tweet_created_at": "2026-01-20T12:00:00Z",
+        "trigger_tweet_id": "t_min_short_side_1",
+        "trigger_created_at": "2026-01-20T12:00:00Z",
+        "origin": "self",
+        "needs_post_min_short_side_check": true
+      }
+    ],
+    "filtered_counts": {
+      "min_short_side": 1
+    }
+  }
+}
+

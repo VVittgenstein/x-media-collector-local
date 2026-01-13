@@ -1,0 +1,115 @@
+{
+  "id": "02_reply_quote_toggle_on",
+  "config": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-01-31",
+    "media_type": "both",
+    "source_types": ["Reply"],
+    "include_quote_media_in_reply": true,
+    "min_short_side": null
+  },
+  "tweets": [
+    {
+      "tweet_id": "t_reply_quote_1",
+      "created_at": "2026-01-10T10:00:00Z",
+      "is_reply": true,
+      "is_retweet": false,
+      "media": [
+        {
+          "media_id": "m_self_img_1",
+          "kind": "image",
+          "url": "https://example.com/m_self_img_1.jpg",
+          "width": 800,
+          "height": 600
+        },
+        {
+          "media_id": "m_self_vid_1",
+          "kind": "video",
+          "url": "https://example.com/m_self_vid_1.mp4",
+          "width": 1280,
+          "height": 720
+        }
+      ],
+      "quoted_tweet": {
+        "tweet_id": "t_quoted_1",
+        "created_at": "2025-12-31T23:00:00Z",
+        "is_reply": false,
+        "is_retweet": false,
+        "media": [
+          {
+            "media_id": "m_quoted_img_1",
+            "kind": "image",
+            "url": "https://example.com/m_quoted_img_1.jpg",
+            "width": 640,
+            "height": 640
+          },
+          {
+            "media_id": "m_quoted_vid_1",
+            "kind": "video",
+            "url": "https://example.com/m_quoted_vid_1.mp4",
+            "width": 1920,
+            "height": 1080
+          }
+        ]
+      }
+    }
+  ],
+  "expected": {
+    "intents": [
+      {
+        "media_id": "m_self_img_1",
+        "kind": "image",
+        "url": "https://example.com/m_self_img_1.jpg",
+        "width": 800,
+        "height": 600,
+        "tweet_id": "t_reply_quote_1",
+        "tweet_created_at": "2026-01-10T10:00:00Z",
+        "trigger_tweet_id": "t_reply_quote_1",
+        "trigger_created_at": "2026-01-10T10:00:00Z",
+        "origin": "self",
+        "needs_post_min_short_side_check": false
+      },
+      {
+        "media_id": "m_self_vid_1",
+        "kind": "video",
+        "url": "https://example.com/m_self_vid_1.mp4",
+        "width": 1280,
+        "height": 720,
+        "tweet_id": "t_reply_quote_1",
+        "tweet_created_at": "2026-01-10T10:00:00Z",
+        "trigger_tweet_id": "t_reply_quote_1",
+        "trigger_created_at": "2026-01-10T10:00:00Z",
+        "origin": "self",
+        "needs_post_min_short_side_check": false
+      },
+      {
+        "media_id": "m_quoted_img_1",
+        "kind": "image",
+        "url": "https://example.com/m_quoted_img_1.jpg",
+        "width": 640,
+        "height": 640,
+        "tweet_id": "t_quoted_1",
+        "tweet_created_at": "2025-12-31T23:00:00Z",
+        "trigger_tweet_id": "t_reply_quote_1",
+        "trigger_created_at": "2026-01-10T10:00:00Z",
+        "origin": "quoted",
+        "needs_post_min_short_side_check": false
+      },
+      {
+        "media_id": "m_quoted_vid_1",
+        "kind": "video",
+        "url": "https://example.com/m_quoted_vid_1.mp4",
+        "width": 1920,
+        "height": 1080,
+        "tweet_id": "t_quoted_1",
+        "tweet_created_at": "2025-12-31T23:00:00Z",
+        "trigger_tweet_id": "t_reply_quote_1",
+        "trigger_created_at": "2026-01-10T10:00:00Z",
+        "origin": "quoted",
+        "needs_post_min_short_side_check": false
+      }
+    ],
+    "filtered_counts": {}
+  }
+}
+
