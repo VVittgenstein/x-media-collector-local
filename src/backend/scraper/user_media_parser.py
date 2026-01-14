@@ -58,8 +58,12 @@ def _unwrap_tweet_result(raw: Any) -> Optional[Mapping[str, Any]]:
     # Some endpoints wrap the Tweet in a visibility container.
     if typename == "TweetWithVisibilityResults":
         inner = raw.get("tweet")
-        if isinstance(inner, Mapping) and inner.get("__typename") == "Tweet":
-            return inner
+        if isinstance(inner, Mapping):
+            # Newer responses may omit __typename on the inner tweet object.
+            if inner.get("__typename") == "Tweet":
+                return inner
+            if "rest_id" in inner and "legacy" in inner:
+                return inner
     return None
 
 
@@ -83,11 +87,22 @@ def _iter_timeline_tweet_results(page: Mapping[str, Any]) -> Iterable[Mapping[st
     if not isinstance(result, Mapping):
         return
 
+    # X 的 GraphQL 响应结构存在版本差异：
+    # - 旧：data.user.result.timeline_v2.timeline.instructions
+    # - 新：data.user.result.timeline.timeline.instructions
+    timeline_container = None
     timeline_v2 = result.get("timeline_v2")
-    if not isinstance(timeline_v2, Mapping):
+    if isinstance(timeline_v2, Mapping):
+        timeline_container = timeline_v2
+    else:
+        timeline = result.get("timeline")
+        if isinstance(timeline, Mapping):
+            timeline_container = timeline
+
+    if not isinstance(timeline_container, Mapping):
         return
 
-    timeline = timeline_v2.get("timeline")
+    timeline = timeline_container.get("timeline")
     if not isinstance(timeline, Mapping):
         return
 
@@ -172,11 +187,22 @@ def extract_bottom_cursor(page: Mapping[str, Any]) -> Optional[str]:
     if not isinstance(result, Mapping):
         return None
 
+    # X 的 GraphQL 响应结构存在版本差异：
+    # - 旧：data.user.result.timeline_v2.timeline.instructions
+    # - 新：data.user.result.timeline.timeline.instructions
+    timeline_container = None
     timeline_v2 = result.get("timeline_v2")
-    if not isinstance(timeline_v2, Mapping):
+    if isinstance(timeline_v2, Mapping):
+        timeline_container = timeline_v2
+    else:
+        timeline = result.get("timeline")
+        if isinstance(timeline, Mapping):
+            timeline_container = timeline
+
+    if not isinstance(timeline_container, Mapping):
         return None
 
-    timeline = timeline_v2.get("timeline")
+    timeline = timeline_container.get("timeline")
     if not isinstance(timeline, Mapping):
         return None
 
@@ -369,4 +395,3 @@ def parse_user_media_tweets(page: Mapping[str, Any]) -> list[Tweet]:
 
     tweets.sort(key=lambda t: (-int(t.created_at.timestamp() * 1_000_000), t.tweet_id))
     return tweets
-

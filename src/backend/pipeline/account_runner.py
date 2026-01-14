@@ -219,7 +219,7 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
 
     # Pass proxy to scraper if configured
     proxy_url = proxy_config.get_url() if proxy_config else None
-    scraper = TwscrapeMediaScraper(credentials=settings.credentials, proxy=proxy_url)
+    scraper = TwscrapeMediaScraper(credentials=settings.credentials, proxy=proxy_url, throttle=throttle)
     tweets = await scraper.collect_tweets(handle=handle)
 
     filter_config = _build_filter_config(run.account_config or {})
