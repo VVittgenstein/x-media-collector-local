@@ -1,20 +1,26 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, ProxyHandler, build_opener
 
 from src.backend.downloader.downloader import DownloadStatus, MediaDownloader, MediaIntent
 from src.backend.fs.storage import AccountStorageManager, MediaType
 from src.backend.lifecycle.models import StartMode
+from src.backend.net.throttle import Throttle, ThrottleConfig
+from src.backend.net.retry import RetryConfig, with_retry
+from src.backend.net.proxy import ProxyConfig, get_urllib_proxy_handlers
 from src.backend.scheduler.models import Run
 from src.backend.settings.store import SettingsStore
 from src.backend.scraper.twscrape_scraper import DEFAULT_USER_AGENT, TwscrapeMediaScraper
 from src.shared.filter_engine.engine import apply_filters
 from src.shared.filter_engine.models import DownloadIntent, FilterConfig, MediaKind
+
+logger = logging.getLogger(__name__)
 
 
 def _build_filter_config(account_config: dict[str, Any]) -> FilterConfig:
@@ -65,6 +71,60 @@ def _to_media_intent(intent: DownloadIntent) -> MediaIntent:
     )
 
 
+def _make_download_func(
+    *,
+    retry_config: Optional[RetryConfig] = None,
+    proxy_config: Optional[ProxyConfig] = None,
+    throttle: Optional[Throttle] = None,
+    timeout_s: float = 30.0,
+) -> Callable[[str], bytes]:
+    """
+    Create a download function with retry, proxy, and throttle support.
+    """
+    headers = {
+        "User-Agent": DEFAULT_USER_AGENT,
+        "Accept": "*/*",
+        "Referer": "https://x.com/",
+    }
+
+    # Build opener with proxy if configured
+    proxy_handlers = get_urllib_proxy_handlers(proxy_config)
+    if proxy_handlers:
+        proxy_handler = ProxyHandler(proxy_handlers)
+        opener = build_opener(proxy_handler)
+    else:
+        opener = build_opener()
+
+    cfg = retry_config or RetryConfig()
+
+    def download_single(url: str) -> bytes:
+        req = Request(url, headers=headers)
+        with opener.open(req, timeout=timeout_s) as resp:
+            return resp.read()
+
+    def download_with_retry_and_throttle(url: str) -> bytes:
+        def attempt_download() -> bytes:
+            # Apply throttle before every attempt (including retries)
+            if throttle:
+                throttle.wait()
+            return download_single(url)
+
+        def on_retry(attempt: int, exc: Exception, delay: float) -> None:
+            status = getattr(exc, "code", None)
+            logger.warning(
+                "Download retry %d/%d after %.2fs (status=%s): %s",
+                attempt + 1,
+                cfg.max_retries,
+                delay,
+                status,
+                url[:80],
+            )
+
+        return with_retry(attempt_download, config=cfg, on_retry=on_retry)
+
+    return download_with_retry_and_throttle
+
+
 def _download_bytes_with_retries(
     url: str,
     *,
@@ -72,6 +132,7 @@ def _download_bytes_with_retries(
     retries: int = 2,
     backoff_s: float = 1.5,
 ) -> bytes:
+    """Legacy function for backward compatibility."""
     headers = {
         "User-Agent": DEFAULT_USER_AGENT,
         "Accept": "*/*",
@@ -110,6 +171,7 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
     Note:
     - Scraping is async (twscrape).
     - Downloading is done in threads to avoid blocking the event loop.
+    - Throttle/retry/proxy configs from settings are applied to both scraper and downloader.
     """
 
     settings = store.load()
@@ -123,12 +185,27 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
     download_root = Path(settings.download_root)
     storage = AccountStorageManager(download_root)
 
+    # Get throttle/retry/proxy configs
+    throttle_config = settings.get_throttle()
+    retry_config = settings.get_retry()
+    proxy_config = settings.get_proxy()
+
+    # Create throttle instance for download spacing
+    throttle = Throttle(throttle_config)
+
+    # Create download function with retry/proxy/throttle
+    download_func = _make_download_func(
+        retry_config=retry_config,
+        proxy_config=proxy_config,
+        throttle=throttle,
+    )
+
     start_mode = getattr(run, "start_mode", None)
     ignore_replace = run.kind == "start" and start_mode == StartMode.IGNORE_REPLACE
     downloader = MediaDownloader(
         storage=storage,
         handle=handle,
-        download_func=_download_bytes_with_retries,
+        download_func=download_func,
         ignore_replace=ignore_replace,
     )
     run.download_stats = downloader.stats.to_dict()
@@ -140,7 +217,9 @@ async def run_account_pipeline(*, run: Run, store: SettingsStore) -> None:
         # Cross-run dedup (first wins) by loading existing files.
         await asyncio.to_thread(downloader.load_existing_files)
 
-    scraper = TwscrapeMediaScraper(credentials=settings.credentials)
+    # Pass proxy to scraper if configured
+    proxy_url = proxy_config.get_url() if proxy_config else None
+    scraper = TwscrapeMediaScraper(credentials=settings.credentials, proxy=proxy_url)
     tweets = await scraper.collect_tweets(handle=handle)
 
     filter_config = _build_filter_config(run.account_config or {})

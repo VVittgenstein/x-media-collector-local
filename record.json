@@ -927,9 +927,9 @@
         "支持代理配置：开启后抓取/下载请求走代理且不影响其他逻辑",
         "[已拍板] 默认采用保守参数，先稳后快；具体数值待 Spike 实验后根据平台反应收敛"
       ],
-      "lane": "next",
+      "lane": "now",
       "priority_suggested": "P1",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-002-spike-cookie-scrape",
         "T-20260113-act-009-scrape-and-apply-filters"
@@ -945,19 +945,38 @@
         "proxy"
       ],
       "artifacts": [
-        "src/backend/net/throttle.*",
-        "src/backend/net/retry.*",
-        "src/frontend/settings/proxy.*"
+        "src/backend/net/__init__.py",
+        "src/backend/net/throttle.py",
+        "src/backend/net/retry.py",
+        "src/backend/net/proxy.py",
+        "src/backend/settings/models.py",
+        "src/backend/settings/api.py",
+        "src/backend/pipeline/account_runner.py",
+        "src/frontend/settings/GlobalSettings.js",
+        "src/frontend/settings/GlobalSettings.css",
+        "tests/net/__init__.py",
+        "tests/net/test_throttle.py",
+        "tests/net/test_retry.py",
+        "tests/net/test_proxy.py"
       ],
       "citations": [
         "EVID-002",
         "EVID-003"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-14T12:00:00Z",
+      "owner": "codex",
       "tags": [
         "seed:ACT-011"
+      ],
+      "completion_notes": "实现了完整的限流/重试/代理功能：1) ThrottleConfig 支持配置 min_interval_s（默认 1.5s）和 jitter_max_s（默认 1.0s）；2) RetryConfig 支持指数退避，对 429/5xx 自动重试（默认 max_retries=3, base_delay=2s）；3) ProxyConfig 支持 http/https/socks4/socks5 代理；4) 所有配置可通过 GlobalSettings UI 修改并持久化；5) account_runner 集成：scraper 使用 proxy，downloader 使用 throttle+retry+proxy；6) 补齐 49 个单元测试（tests/net/），全部通过。",
+      "code_review_fixes": [
+        {
+          "issue": "[P2] Throttle skipped on retry attempts",
+          "description": "throttle.wait() 在 with_retry 之前调用，导致重试时跳过限流。修复：将 throttle.wait() 移入 attempt_download() 内部，确保每次尝试（含重试）都执行限流等待。",
+          "fixed_at": "2026-01-14T13:00:00Z",
+          "files_changed": ["src/backend/pipeline/account_runner.py"]
+        }
       ]
     },
 
