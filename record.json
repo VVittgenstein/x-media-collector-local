@@ -994,7 +994,7 @@
       ],
       "lane": "next",
       "priority_suggested": "P1",
-      "status": "todo",
+      "status": "done",
       "dependencies": [
         "T-20260113-act-004-global-settings"
       ],
@@ -1016,12 +1016,13 @@
         "EVID-003"
       ],
       "created_at": "2026-01-13T04:51:26Z",
-      "updated_at": "2026-01-13T04:51:26Z",
-      "owner": "tbd",
+      "updated_at": "2026-01-14T13:40:00Z",
+      "owner": "claude",
       "tags": [
         "doc",
         "security"
-      ]
+      ],
+      "completion_notes": "完成 README.md 和 docs/ops/troubleshooting.md 文档编写：1) README 提供完整的一键启动路径（含 Python 虚拟环境、依赖安装、uvicorn 启动命令）；2) 显著位置添加风险提示（会话模拟风险、账号封禁风险、建议使用非主账号）；3) 详细说明凭证获取步骤与安全策略（不回显、不记录日志）；4) 提供排障流程：检查凭证→降频→启用代理→升级抓取库；5) 创建详细的故障排查指南文档，覆盖 401/403/429 错误、代理配置、ffmpeg 问题等常见场景。"
     }
   },
   "questions_for_human": [],
