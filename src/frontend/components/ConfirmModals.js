@@ -30,7 +30,7 @@ const CancelMode = {
  */
 function createModalOverlay(content) {
   const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
+  overlay.className = "modal-overlay fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4";
   overlay.appendChild(content);
   return overlay;
 }
@@ -41,19 +41,26 @@ function createModalOverlay(content) {
  */
 function createModalContainer() {
   const container = document.createElement("div");
-  container.className = "modal-container";
+  container.className = "modal-container bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden";
   return container;
 }
 
 /**
  * Create a modal header element.
  * @param {string} title - The modal title.
+ * @param {string} icon - Material Symbol icon name.
+ * @param {string} iconColor - Tailwind color class for icon.
  * @returns {HTMLElement} The modal header element.
  */
-function createModalHeader(title) {
+function createModalHeader(title, icon = "warning", iconColor = "text-amber-500") {
   const header = document.createElement("div");
-  header.className = "modal-header";
-  header.textContent = title;
+  header.className = "px-6 pt-6 pb-4";
+  header.innerHTML = `
+    <div class="flex items-center gap-3">
+      <span class="material-symbols-outlined text-2xl ${iconColor}">${icon}</span>
+      <h3 class="text-lg font-bold text-slate-800">${title}</h3>
+    </div>
+  `;
   return header;
 }
 
@@ -64,7 +71,7 @@ function createModalHeader(title) {
  */
 function createModalBody(content) {
   const body = document.createElement("div");
-  body.className = "modal-body";
+  body.className = "px-6 pb-4 text-sm text-slate-600";
   if (typeof content === "string") {
     body.innerHTML = content;
   } else {
@@ -80,10 +87,10 @@ function createModalBody(content) {
  */
 function createModalFooter(buttons) {
   const footer = document.createElement("div");
-  footer.className = "modal-footer";
+  footer.className = "px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-wrap gap-2 justify-end";
   for (const btn of buttons) {
     const button = document.createElement("button");
-    button.className = `btn ${btn.className || ""}`.trim();
+    button.className = btn.className || "px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition";
     button.textContent = btn.text;
     button.addEventListener("click", btn.onClick);
     footer.appendChild(button);
@@ -92,40 +99,53 @@ function createModalFooter(buttons) {
 }
 
 /**
+ * Create an option card for modal choices.
+ * @param {Object} options - Option config.
+ * @param {string} options.icon - Material Symbol icon name.
+ * @param {string} options.iconBgColor - Tailwind bg color class.
+ * @param {string} options.iconTextColor - Tailwind text color class.
+ * @param {string} options.title - Option title.
+ * @param {string} options.description - Option description.
+ * @param {string} options.hoverColor - Tailwind hover bg and border color classes.
+ * @param {function} options.onClick - Click handler.
+ * @returns {HTMLElement} The option card element.
+ */
+function createOptionCard({ icon, iconBgColor, iconTextColor, title, description, hoverColor, onClick }) {
+  const card = document.createElement("button");
+  card.className = `w-full flex items-start p-3 border border-slate-200 rounded-lg ${hoverColor} group text-left transition mb-2`;
+  card.innerHTML = `
+    <div class="${iconBgColor} ${iconTextColor} p-2 rounded-md mr-3 group-hover:opacity-90">
+      <span class="material-symbols-outlined text-lg">${icon}</span>
+    </div>
+    <div>
+      <div class="text-sm font-semibold text-slate-700">${title}</div>
+      <div class="text-xs text-slate-500">${description}</div>
+    </div>
+  `;
+  card.addEventListener("click", onClick);
+  return card;
+}
+
+/**
  * Show the Start New confirmation modal.
- *
- * This modal is shown when the user clicks "Start" and the account
- * already has existing files. It presents three options:
- * - Delete & Restart: Delete all existing files and start fresh
- * - Ignore & Replace: Keep files, new run will replace by hash
- * - Pack & Restart: Archive files to zip, then start fresh
- *
- * @param {Object} options - Modal options.
- * @param {string} options.handle - The Twitter handle.
- * @param {number} options.imageCount - Number of existing images.
- * @param {number} options.videoCount - Number of existing videos.
- * @param {function(StartMode): void} options.onConfirm - Called when user selects a mode.
- * @param {function(): void} options.onCancel - Called when user cancels.
- * @returns {HTMLElement} The modal overlay element (add to DOM to show).
  */
 function showStartNewModal({ handle, imageCount, videoCount, onConfirm, onCancel }) {
   const totalCount = imageCount + videoCount;
 
   const container = createModalContainer();
 
-  container.appendChild(createModalHeader("Start New - Existing Files Found"));
+  container.appendChild(createModalHeader("Existing Files Found", "folder", "text-amber-500"));
 
-  const bodyContent = document.createElement("div");
-  bodyContent.innerHTML = `
-    <p>Account <strong>@${escapeHtml(handle)}</strong> has existing files:</p>
-    <ul>
-      <li>Images: <strong>${imageCount}</strong></li>
-      <li>Videos: <strong>${videoCount}</strong></li>
-      <li>Total: <strong>${totalCount}</strong></li>
-    </ul>
-    <p>How would you like to handle these files?</p>
+  const body = document.createElement("div");
+  body.className = "px-6 pb-4";
+  body.innerHTML = `
+    <p class="text-sm text-slate-600 mb-4">
+      Account <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-800">@${escapeHtml(handle)}</span> has
+      <strong>${totalCount}</strong> existing files
+      (${imageCount} images, ${videoCount} videos).
+    </p>
+    <p class="text-xs text-slate-500 mb-4">How would you like to handle these files?</p>
   `;
-  container.appendChild(createModalBody(bodyContent));
 
   let overlay = null;
 
@@ -135,45 +155,67 @@ function showStartNewModal({ handle, imageCount, videoCount, onConfirm, onCancel
     }
   };
 
-  const footer = createModalFooter([
-    {
-      text: "Delete & Restart",
-      className: "btn-danger",
-      onClick: () => {
-        closeModal();
-        onConfirm(StartMode.DELETE);
-      },
+  // Option cards
+  const optionsContainer = document.createElement("div");
+
+  optionsContainer.appendChild(createOptionCard({
+    icon: "update",
+    iconBgColor: "bg-blue-100",
+    iconTextColor: "text-blue-600",
+    title: "Ignore & Replace (Recommended)",
+    description: "Keep old files, overwrite if content changes. Newest run wins.",
+    hoverColor: "hover:bg-blue-50 hover:border-blue-200",
+    onClick: () => {
+      closeModal();
+      onConfirm(StartMode.IGNORE_REPLACE);
     },
-    {
-      text: "Ignore & Replace",
-      className: "btn-warning",
-      onClick: () => {
-        closeModal();
-        onConfirm(StartMode.IGNORE_REPLACE);
-      },
+  }));
+
+  optionsContainer.appendChild(createOptionCard({
+    icon: "inventory_2",
+    iconBgColor: "bg-amber-100",
+    iconTextColor: "text-amber-600",
+    title: "Pack & Restart",
+    description: "Zip existing folder to archive, then clean start.",
+    hoverColor: "hover:bg-amber-50 hover:border-amber-200",
+    onClick: () => {
+      closeModal();
+      onConfirm(StartMode.PACK);
     },
-    {
-      text: "Pack & Restart",
-      className: "btn-primary",
-      onClick: () => {
-        closeModal();
-        onConfirm(StartMode.PACK);
-      },
+  }));
+
+  optionsContainer.appendChild(createOptionCard({
+    icon: "delete_forever",
+    iconBgColor: "bg-red-100",
+    iconTextColor: "text-red-600",
+    title: "Delete & Restart",
+    description: "Permanently delete all existing files for this account.",
+    hoverColor: "hover:bg-red-50 hover:border-red-200",
+    onClick: () => {
+      closeModal();
+      onConfirm(StartMode.DELETE);
     },
-    {
-      text: "Cancel",
-      className: "",
-      onClick: () => {
-        closeModal();
-        onCancel();
-      },
-    },
-  ]);
+  }));
+
+  body.appendChild(optionsContainer);
+  container.appendChild(body);
+
+  // Footer with cancel
+  const footer = document.createElement("div");
+  footer.className = "px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition";
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.addEventListener("click", () => {
+    closeModal();
+    onCancel();
+  });
+  footer.appendChild(cancelBtn);
   container.appendChild(footer);
 
   overlay = createModalOverlay(container);
 
-  // Close on overlay click (outside modal)
+  // Close on overlay click
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       closeModal();
@@ -196,32 +238,21 @@ function showStartNewModal({ handle, imageCount, videoCount, onConfirm, onCancel
 
 /**
  * Show the Cancel Running confirmation modal.
- *
- * This modal is shown when the user clicks "Cancel" on a running task.
- * It presents two options:
- * - Keep: Keep all downloaded files (partial progress preserved)
- * - Delete: Delete all downloaded files
- *
- * Note: This is NOT shown for Queued tasks - those are cancelled immediately
- * without a modal.
- *
- * @param {Object} options - Modal options.
- * @param {string} options.handle - The Twitter handle.
- * @param {function(CancelMode): void} options.onConfirm - Called when user selects a mode.
- * @param {function(): void} options.onCancel - Called when user cancels the dialog.
- * @returns {HTMLElement} The modal overlay element (add to DOM to show).
  */
 function showCancelRunningModal({ handle, onConfirm, onCancel }) {
   const container = createModalContainer();
 
-  container.appendChild(createModalHeader("Cancel Running Task"));
+  container.appendChild(createModalHeader("Cancel Running Task", "stop_circle", "text-red-500"));
 
-  const bodyContent = document.createElement("div");
-  bodyContent.innerHTML = `
-    <p>You are about to cancel the running task for <strong>@${escapeHtml(handle)}</strong>.</p>
-    <p>What would you like to do with the downloaded files?</p>
+  const body = document.createElement("div");
+  body.className = "px-6 pb-4";
+  body.innerHTML = `
+    <p class="text-sm text-slate-600 mb-4">
+      You are about to cancel the running task for
+      <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-800">@${escapeHtml(handle)}</span>.
+    </p>
+    <p class="text-xs text-slate-500 mb-4">What would you like to do with the downloaded files?</p>
   `;
-  container.appendChild(createModalBody(bodyContent));
 
   let overlay = null;
 
@@ -231,37 +262,54 @@ function showCancelRunningModal({ handle, onConfirm, onCancel }) {
     }
   };
 
-  const footer = createModalFooter([
-    {
-      text: "Keep Files",
-      className: "btn-primary",
-      onClick: () => {
-        closeModal();
-        onConfirm(CancelMode.KEEP);
-      },
+  // Option cards
+  const optionsContainer = document.createElement("div");
+
+  optionsContainer.appendChild(createOptionCard({
+    icon: "folder",
+    iconBgColor: "bg-blue-100",
+    iconTextColor: "text-blue-600",
+    title: "Keep Files",
+    description: "Preserve downloaded files (partial progress saved).",
+    hoverColor: "hover:bg-blue-50 hover:border-blue-200",
+    onClick: () => {
+      closeModal();
+      onConfirm(CancelMode.KEEP);
     },
-    {
-      text: "Delete Files",
-      className: "btn-danger",
-      onClick: () => {
-        closeModal();
-        onConfirm(CancelMode.DELETE);
-      },
+  }));
+
+  optionsContainer.appendChild(createOptionCard({
+    icon: "delete",
+    iconBgColor: "bg-red-100",
+    iconTextColor: "text-red-600",
+    title: "Delete Files",
+    description: "Delete all files downloaded in this run.",
+    hoverColor: "hover:bg-red-50 hover:border-red-200",
+    onClick: () => {
+      closeModal();
+      onConfirm(CancelMode.DELETE);
     },
-    {
-      text: "Don't Cancel",
-      className: "",
-      onClick: () => {
-        closeModal();
-        onCancel();
-      },
-    },
-  ]);
+  }));
+
+  body.appendChild(optionsContainer);
+  container.appendChild(body);
+
+  // Footer
+  const footer = document.createElement("div");
+  footer.className = "px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end";
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition";
+  cancelBtn.textContent = "Don't Cancel";
+  cancelBtn.addEventListener("click", () => {
+    closeModal();
+    onCancel();
+  });
+  footer.appendChild(cancelBtn);
   container.appendChild(footer);
 
   overlay = createModalOverlay(container);
 
-  // Close on overlay click (outside modal)
+  // Close on overlay click
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) {
       closeModal();
@@ -284,8 +332,6 @@ function showCancelRunningModal({ handle, onConfirm, onCancel }) {
 
 /**
  * Escape HTML special characters to prevent XSS.
- * @param {string} text - The text to escape.
- * @returns {string} The escaped text.
  */
 function escapeHtml(text) {
   const div = document.createElement("div");

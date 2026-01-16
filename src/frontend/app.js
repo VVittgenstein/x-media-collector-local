@@ -1,5 +1,8 @@
 /* global fetch, AccountRowUrlInput, GlobalSettingsPanel, AccountRowConfig, AccountRowStats, configClipboard */
 
+/**
+ * Helper to create DOM elements
+ */
 function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
@@ -15,7 +18,41 @@ function el(tag, attrs = {}, children = []) {
 }
 
 /**
- * 任务状态枚举
+ * Show a toast notification
+ */
+function showToast(message, type = "success") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+
+  const iconMap = {
+    success: "check_circle",
+    error: "error",
+    info: "info",
+  };
+  const colorMap = {
+    success: "text-emerald-400",
+    error: "text-red-400",
+    info: "text-blue-400",
+  };
+
+  const toast = el("div", {
+    class: "bg-slate-800 text-white px-4 py-2 rounded-lg shadow-xl text-sm font-medium flex items-center gap-2 toast-enter pointer-events-auto",
+  }, [
+    el("span", { class: `material-symbols-outlined text-[18px] ${colorMap[type]}`, text: iconMap[type] }),
+    el("span", { text: message }),
+  ]);
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.remove("toast-enter");
+    toast.classList.add("toast-exit");
+    setTimeout(() => toast.remove(), 200);
+  }, 2000);
+}
+
+/**
+ * Task status enumeration
  */
 const TaskStatus = {
   IDLE: "Idle",
@@ -27,19 +64,21 @@ const TaskStatus = {
 };
 
 /**
- * 判断任务是否锁定（不可编辑配置）
- * @param {string} status
- * @returns {boolean}
+ * Check if task is locked (cannot edit config)
  */
 function isLockedStatus(status) {
   return status === TaskStatus.QUEUED || status === TaskStatus.RUNNING;
 }
 
+/**
+ * AccountRow - Individual account row component
+ */
 class AccountRow {
-  constructor(container, { getSettings }) {
+  constructor(container, { getSettings, onDelete }) {
     this.container = container;
     this.getSettings = getSettings;
-    this._validation = { valid: false, handle: null, error: "URL 不能为空" };
+    this.onDelete = onDelete;
+    this._validation = { valid: false, handle: null, error: "URL cannot be empty" };
     this._taskStatus = TaskStatus.IDLE;
     this._queuedPosition = null;
     this._unsubscribeClipboard = null;
@@ -47,11 +86,15 @@ class AccountRow {
   }
 
   _render() {
-    this.card = el("div", { class: "account-card" });
-    const row = el("div", { class: "row" });
+    this.card = el("div", { class: "account-row bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 group" });
 
-    const urlContainer = el("div", { style: "flex: 1;" });
-    this.urlInput = new AccountRowUrlInput(urlContainer, {
+    // Main Row Content
+    const mainRow = el("div", { class: "flex flex-col md:flex-row items-start md:items-center p-4 gap-4" });
+
+    // 1. URL Input Section
+    const urlSection = el("div", { class: "flex-1 w-full md:w-auto min-w-[240px]" });
+    this.urlContainer = el("div", { class: "url-input-wrapper" });
+    this.urlInput = new AccountRowUrlInput(this.urlContainer, {
       onValidationChange: (result) => {
         const prevHandle = this._validation?.handle;
         this._validation = result;
@@ -64,49 +107,94 @@ class AccountRow {
         if (this.statsComponent) this.statsComponent.refresh();
       },
     });
+    urlSection.appendChild(this.urlContainer);
+    mainRow.appendChild(urlSection);
 
-    const actions = el("div", { class: "account-actions" });
-    this.startBtn = el("button", {
-      class: "btn btn-primary",
-      text: "Start",
-      onclick: () => this._onStart("start"),
-    });
-    this.continueBtn = el("button", {
-      class: "btn",
-      text: "Continue",
-      onclick: () => this._onStart("continue"),
-    });
-    this.cancelBtn = el("button", {
-      class: "btn btn-danger",
-      text: "Cancel",
-      onclick: () => this._onCancel(),
-    });
-    actions.appendChild(this.startBtn);
-    actions.appendChild(this.continueBtn);
-    actions.appendChild(this.cancelBtn);
+    // 2. Status & Config Section
+    const statusSection = el("div", { class: "flex items-center gap-3 w-full md:w-auto shrink-0" });
 
-    row.appendChild(urlContainer);
-    row.appendChild(actions);
+    // Status pill
+    this.statusPill = el("span", { class: "status-pill status-idle", text: "Idle" });
+    statusSection.appendChild(this.statusPill);
 
-    // 配置组件容器
-    this.configContainer = el("div", { class: "account-config-container" });
-    this.statsContainer = el("div", { class: "account-stats-container" });
+    // Config toggle + summary
+    const configToggle = el("div", { class: "flex items-center gap-1 bg-slate-50 rounded-lg p-1 border border-slate-100" });
+    this.btnConfigToggle = el("button", {
+      class: "p-1.5 rounded hover:bg-white hover:shadow-sm text-slate-400 hover:text-blue-600 transition",
+      title: "Expand Config",
+    }, [el("span", { class: "material-symbols-outlined text-[18px]", text: "tune" })]);
+    configToggle.appendChild(this.btnConfigToggle);
+    configToggle.appendChild(el("div", { class: "w-px h-4 bg-slate-200" }));
+    this.configSummary = el("span", { class: "config-summary text-[10px] font-medium text-slate-500 px-1 truncate max-w-[80px]", text: "Default" });
+    configToggle.appendChild(this.configSummary);
+    statusSection.appendChild(configToggle);
+    mainRow.appendChild(statusSection);
 
-    this.meta = el("div", { class: "account-meta" });
-    this.reasonEl = el("div", { class: "reason" });
-    this.statusPill = el("div", { class: "pill muted", text: "Idle" });
-    this.meta.appendChild(this.reasonEl);
-    this.meta.appendChild(this.statusPill);
+    // 3. Actions Section
+    const actionsSection = el("div", { class: "actions-container flex items-center gap-1 w-full md:w-auto justify-end flex-1 ml-auto" });
 
-    this.card.appendChild(row);
+    // Folder button
+    this.btnFolder = el("button", {
+      class: "p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition",
+      title: "Open Folder",
+    }, [el("span", { class: "material-symbols-outlined text-[20px]", text: "folder" })]);
+    actionsSection.appendChild(this.btnFolder);
+
+    actionsSection.appendChild(el("div", { class: "w-px h-5 bg-slate-200 mx-1" }));
+
+    // Copy button
+    this.btnCopy = el("button", {
+      class: "p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition",
+      title: "Copy Config",
+    }, [el("span", { class: "material-symbols-outlined text-[20px]", text: "content_copy" })]);
+    actionsSection.appendChild(this.btnCopy);
+
+    // Paste button
+    this.btnPaste = el("button", {
+      class: "p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed",
+      title: "Paste Config",
+      disabled: "disabled",
+    }, [el("span", { class: "material-symbols-outlined text-[20px]", text: "content_paste" })]);
+    actionsSection.appendChild(this.btnPaste);
+
+    actionsSection.appendChild(el("div", { class: "w-px h-5 bg-slate-200 mx-1" }));
+
+    // Main action button (Start/Continue/Stop)
+    this.btnMain = el("button", {
+      class: "flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition shadow-sm hover:shadow active:scale-95 disabled:opacity-50 mx-1",
+    }, [
+      el("span", { class: "material-symbols-outlined text-[18px] action-icon", text: "play_arrow" }),
+      el("span", { class: "action-text", text: "Start" }),
+    ]);
+    actionsSection.appendChild(this.btnMain);
+
+    // Delete button
+    this.btnDelete = el("button", {
+      class: "p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-30",
+      title: "Delete Row",
+    }, [el("span", { class: "material-symbols-outlined text-[20px]", text: "delete" })]);
+    actionsSection.appendChild(this.btnDelete);
+
+    mainRow.appendChild(actionsSection);
+    this.card.appendChild(mainRow);
+
+    // Config Panel (collapsible)
+    this.configContainer = el("div", { class: "config-panel hidden border-t border-slate-100 bg-slate-50/50 animate-fade-in" });
     this.card.appendChild(this.configContainer);
-    this.card.appendChild(this.statsContainer);
-    this.card.appendChild(this.meta);
+
+    // Stats Section (inside config panel or separate)
+    this.statsContainer = el("div", { class: "stats-container" });
+
+    // Meta/Reason Section
+    this.reasonEl = el("div", { class: "px-4 pb-2 text-xs text-slate-500 hidden" });
+    this.card.appendChild(this.reasonEl);
+
     this.container.appendChild(this.card);
 
-    // 初始化配置组件
+    // Initialize sub-components
     this._initConfigComponent();
     this._initStatsComponent();
+    this._bindEvents();
     this._updateGating();
   }
 
@@ -114,26 +202,29 @@ class AccountRow {
     this.configComponent = new AccountRowConfig(this.configContainer, {
       locked: isLockedStatus(this._taskStatus),
       onChange: (config) => {
-        // 配置变化时的回调（可用于未来的持久化）
+        this._updateConfigSummary();
       },
       onCopy: (config) => {
         configClipboard.copy(config);
-        this._showCopyFeedback();
+        showToast("Config copied!", "success");
       },
       onPaste: () => {
         const config = configClipboard.paste();
         if (config) {
           this.configComponent.setConfig(config);
-          this._showPasteFeedback();
+          this._updateConfigSummary();
+          showToast("Config pasted!", "success");
         }
       },
       canPaste: () => configClipboard.hasContent(),
     });
 
-    // 订阅剪贴板变化，更新 Paste 按钮状态
     this._unsubscribeClipboard = configClipboard.subscribe(() => {
+      this._updatePasteButton();
       this.configComponent.refreshPasteAvailability();
     });
+
+    this._updateConfigSummary();
   }
 
   _initStatsComponent() {
@@ -143,97 +234,134 @@ class AccountRow {
     });
   }
 
-  _showCopyFeedback() {
-    const copyBtn = this.configContainer.querySelector(".config-copy-btn");
-    if (copyBtn) {
-      const originalText = copyBtn.innerHTML;
-      copyBtn.innerHTML = '<span class="btn-icon">✓</span> Copied';
-      copyBtn.classList.add("btn-success");
-      setTimeout(() => {
-        copyBtn.innerHTML = originalText;
-        copyBtn.classList.remove("btn-success");
-      }, 1500);
-    }
+  _bindEvents() {
+    // Config toggle
+    this.btnConfigToggle.onclick = () => {
+      this.configContainer.classList.toggle("hidden");
+    };
+
+    // Folder
+    this.btnFolder.onclick = () => {
+      if (this.statsComponent) {
+        this.statsComponent._onOpenFolder();
+      }
+    };
+
+    // Copy
+    this.btnCopy.onclick = () => {
+      if (this.configComponent) {
+        const config = this.configComponent.getConfig();
+        configClipboard.copy(config);
+        showToast("Config copied!", "success");
+      }
+    };
+
+    // Paste
+    this.btnPaste.onclick = () => {
+      if (isLockedStatus(this._taskStatus)) return;
+      if (!configClipboard.hasContent()) return;
+      const config = configClipboard.paste();
+      if (config && this.configComponent) {
+        this.configComponent.setConfig(config);
+        this._updateConfigSummary();
+        showToast("Config pasted!", "success");
+      }
+    };
+
+    // Main action
+    this.btnMain.onclick = () => {
+      if (isLockedStatus(this._taskStatus)) {
+        this._onCancel();
+      } else {
+        this._onStart("start");
+      }
+    };
+
+    // Delete
+    this.btnDelete.onclick = () => this._onDeleteClick();
   }
 
-  _showPasteFeedback() {
-    const pasteBtn = this.configContainer.querySelector(".config-paste-btn");
-    if (pasteBtn) {
-      const originalText = pasteBtn.innerHTML;
-      pasteBtn.innerHTML = '<span class="btn-icon">✓</span> Pasted';
-      pasteBtn.classList.add("btn-success");
-      setTimeout(() => {
-        pasteBtn.innerHTML = originalText;
-        pasteBtn.classList.remove("btn-success");
-      }, 1500);
-    }
+  _updateConfigSummary() {
+    if (!this.configComponent) return;
+    const config = this.configComponent.getConfig();
+    let summary = "Default";
+
+    // Build summary based on config
+    const parts = [];
+    if (config.mediaType === "images") parts.push("Images");
+    else if (config.mediaType === "videos") parts.push("Videos");
+    else parts.push("All");
+
+    if (config.startDate || config.endDate) parts.push("Date");
+    if (config.minShortSide && config.minShortSide > 0) parts.push(`>${config.minShortSide}px`);
+
+    summary = parts.length > 0 ? parts.join(", ") : "Default";
+    this.configSummary.textContent = summary;
+    this.configSummary.title = summary;
+  }
+
+  _updatePasteButton() {
+    const canPaste = configClipboard.hasContent() && !isLockedStatus(this._taskStatus);
+    this.btnPaste.disabled = !canPaste;
+    this.btnPaste.title = canPaste ? "Paste Config" : "Copy a config first";
   }
 
   _onStart(kind) {
     const settings = this.getSettings();
     const credsOk = Boolean(settings?.credentials?.configured);
     if (!credsOk) {
-      this._setStatus("Blocked", "btn btn-danger");
-      this.reasonEl.textContent = "凭证未配置，无法启动任务";
+      this._setStatus(TaskStatus.IDLE);
+      this._showReason("Credentials not configured. Please configure in Global Settings.");
       return;
     }
     if (!this._validation.valid) {
-      this._setStatus("Blocked", "btn btn-danger");
-      this.reasonEl.textContent = this._validation.error || "URL 无效";
+      this._setStatus(TaskStatus.IDLE);
+      this._showReason(this._validation.error || "Invalid URL");
       return;
     }
     const handle = this._validation.handle;
     const config = this.getConfig() || {};
 
     if (kind === "start") {
-      // For Start New, check if there are existing files first
       this._checkExistingAndStart(handle, config);
     } else {
-      // For Continue, proceed directly
       this._startOrContinue(kind, { handle, config });
     }
   }
 
   async _checkExistingAndStart(handle, config) {
     try {
-      // Check for existing files
       const res = await fetch(`/api/lifecycle/check/${encodeURIComponent(handle)}`);
       if (!res.ok) {
         const detail = await this._readError(res);
-        this.reasonEl.textContent = `检查失败（HTTP ${res.status}）：${detail}`;
+        this._showReason(`Check failed (HTTP ${res.status}): ${detail}`);
         return;
       }
 
       const info = await res.json();
 
       if (info.has_files) {
-        // Show the Start New modal with three options
         const modal = ConfirmModals.showStartNewModal({
           handle,
           imageCount: info.image_count,
           videoCount: info.video_count,
           onConfirm: async (mode) => {
-            // Prepare (delete/pack) then start
             await this._prepareAndStart(handle, config, mode);
           },
-          onCancel: () => {
-            // User cancelled, do nothing
-          },
+          onCancel: () => {},
         });
         document.body.appendChild(modal);
       } else {
-        // No existing files, start directly
         this._startOrContinue("start", { handle, config });
       }
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
-      this.reasonEl.textContent = `检查失败（${message}）`;
+      this._showReason(`Check failed: ${message}`);
     }
   }
 
   async _prepareAndStart(handle, config, mode) {
     try {
-      // Perform the prepare operation (delete/pack/ignore)
       const prepRes = await fetch("/api/lifecycle/prepare-start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -242,15 +370,14 @@ class AccountRow {
 
       if (!prepRes.ok) {
         const detail = await this._readError(prepRes);
-        this.reasonEl.textContent = `准备失败（HTTP ${prepRes.status}）：${detail}`;
+        this._showReason(`Prepare failed (HTTP ${prepRes.status}): ${detail}`);
         return;
       }
 
-      // Now start the task
       this._startOrContinue("start", { handle, config, startMode: mode });
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
-      this.reasonEl.textContent = `准备失败（${message}）`;
+      this._showReason(`Prepare failed: ${message}`);
     }
   }
 
@@ -265,18 +392,26 @@ class AccountRow {
       if (!res.ok) {
         const detail = await this._readError(res);
         if (res.status === 409) {
-          this.reasonEl.textContent = `该账号已有活跃任务：${detail}`;
+          this._showReason(`Account already has active task: ${detail}`);
           return;
         }
-        this.reasonEl.textContent = `启动失败（HTTP ${res.status}）：${detail}`;
+        this._showReason(`Start failed (HTTP ${res.status}): ${detail}`);
         return;
       }
       const data = await res.json();
       this._queuedPosition = data.queued_position ?? null;
       this.setTaskStatus(data.status);
+      this._hideReason();
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
-      this.reasonEl.textContent = `启动失败（${message}）`;
+      this._showReason(`Start failed: ${message}`);
+    }
+  }
+
+  _onDeleteClick() {
+    if (isLockedStatus(this._taskStatus)) return;
+    if (this.onDelete) {
+      this.onDelete(this);
     }
   }
 
@@ -286,26 +421,21 @@ class AccountRow {
     if (!handle) return;
 
     if (this._taskStatus === TaskStatus.RUNNING) {
-      // Running tasks require confirmation with Keep/Delete options
       const modal = ConfirmModals.showCancelRunningModal({
         handle,
         onConfirm: async (mode) => {
           await this._performCancel(handle, mode);
         },
-        onCancel: () => {
-          // User cancelled the dialog, do nothing
-        },
+        onCancel: () => {},
       });
       document.body.appendChild(modal);
     } else {
-      // Queued tasks cancel immediately without modal
       await this._performCancel(handle, null);
     }
   }
 
   async _performCancel(handle, cancelMode) {
     try {
-      // First cancel the task in the scheduler
       const res = await fetch("/api/scheduler/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -313,14 +443,13 @@ class AccountRow {
       });
       if (!res.ok) {
         const detail = await this._readError(res);
-        this.reasonEl.textContent = `取消失败（HTTP ${res.status}）：${detail}`;
+        this._showReason(`Cancel failed (HTTP ${res.status}): ${detail}`);
         return;
       }
       const data = await res.json();
       this._queuedPosition = data.queued_position ?? null;
       this.setTaskStatus(data.status);
 
-      // If a cancel mode was specified and it's DELETE, clean up files
       if (cancelMode === ConfirmModals.CancelMode.DELETE) {
         try {
           const cleanupRes = await fetch("/api/lifecycle/prepare-cancel", {
@@ -330,43 +459,45 @@ class AccountRow {
           });
           if (!cleanupRes.ok) {
             const detail = await this._readError(cleanupRes);
-            this.reasonEl.textContent = `任务已取消，但删除文件失败（HTTP ${cleanupRes.status}）：${detail}`;
+            this._showReason(`Cancelled, but file deletion failed (HTTP ${cleanupRes.status}): ${detail}`);
           }
         } catch (cleanupErr) {
-          // Log but don't fail the cancel operation
           console.error("Cleanup failed:", cleanupErr);
-          this.reasonEl.textContent = `任务已取消，但删除文件失败：${cleanupErr.message || cleanupErr}`;
+          this._showReason(`Cancelled, but file deletion failed: ${cleanupErr.message || cleanupErr}`);
         }
       }
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
-      this.reasonEl.textContent = `取消失败（${message}）`;
+      this._showReason(`Cancel failed: ${message}`);
     }
   }
 
-  _setStatus(text, className = "pill") {
-    this.statusPill.textContent = text;
-    this.statusPill.className = `pill ${className}`.trim();
+  _setStatus(status) {
+    this._taskStatus = status;
+    const statusLower = status.toLowerCase();
+    this.statusPill.className = `status-pill status-${statusLower}`;
+    this.statusPill.textContent = status;
   }
 
-  /**
-   * 设置任务状态
-   * @param {string} status - TaskStatus 枚举值
-   */
+  _showReason(text) {
+    this.reasonEl.textContent = text;
+    this.reasonEl.classList.remove("hidden");
+  }
+
+  _hideReason() {
+    this.reasonEl.textContent = "";
+    this.reasonEl.classList.add("hidden");
+  }
+
   setTaskStatus(status) {
     this._taskStatus = status;
     if (!isLockedStatus(status)) this._queuedPosition = null;
     this._updateGating();
-    // 更新配置组件锁定状态
     if (this.configComponent) {
       this.configComponent.setLocked(isLockedStatus(status));
     }
   }
 
-  /**
-   * 获取任务状态
-   * @returns {string}
-   */
   getTaskStatus() {
     return this._taskStatus;
   }
@@ -382,21 +513,14 @@ class AccountRow {
     if (this.statsComponent) this.statsComponent.applyBackendState(state);
   }
 
-  /**
-   * 获取当前配置
-   * @returns {AccountConfig}
-   */
   getConfig() {
     return this.configComponent ? this.configComponent.getConfig() : null;
   }
 
-  /**
-   * 设置配置
-   * @param {AccountConfig} config
-   */
   setConfig(config) {
     if (this.configComponent) {
       this.configComponent.setConfig(config);
+      this._updateConfigSummary();
     }
   }
 
@@ -405,49 +529,59 @@ class AccountRow {
     const credsOk = Boolean(settings?.credentials?.configured);
     const isLocked = isLockedStatus(this._taskStatus);
 
-    let disabled = false;
-    let reason = "";
+    // Update status pill
+    this._setStatus(this._taskStatus);
+
+    // Update main button
+    const actionIcon = this.btnMain.querySelector(".action-icon");
+    const actionText = this.btnMain.querySelector(".action-text");
 
     if (isLocked) {
-      disabled = true;
-      if (this._taskStatus === TaskStatus.QUEUED && this._queuedPosition) {
-        reason = `任务排队中（#${this._queuedPosition}）`;
-      } else {
-        reason = this._taskStatus === TaskStatus.QUEUED ? "任务排队中" : "任务运行中";
-      }
-    } else if (!credsOk) {
-      disabled = true;
-      reason = "凭证未配置：请先在 Global Settings 中填写 auth_token/ct0";
-    } else if (!this._validation.valid) {
-      disabled = true;
-      reason = this._validation.error || "URL 无效";
-    }
-
-    this.startBtn.disabled = disabled;
-    this.continueBtn.disabled = disabled;
-    this.cancelBtn.disabled = !isLocked;
-    this.reasonEl.textContent = reason;
-
-    // 更新状态标签
-    if (isLocked) {
-      this._setStatus(this._taskStatus, this._taskStatus === TaskStatus.RUNNING ? "pill running" : "pill queued");
-    } else if (disabled) {
-      this._setStatus("Idle", "muted");
+      actionIcon.textContent = "stop";
+      actionText.textContent = "Stop";
+      this.btnMain.classList.remove("bg-slate-800", "hover:bg-slate-700");
+      this.btnMain.classList.add("bg-red-600", "hover:bg-red-700");
+      this.btnMain.disabled = false;
     } else {
-      // 非锁定且非禁用状态：显示完成/取消/失败/空闲
-      const statusClassMap = {
-        [TaskStatus.DONE]: "completed",
-        [TaskStatus.CANCELLED]: "cancelled",
-        [TaskStatus.FAILED]: "failed",
-        [TaskStatus.IDLE]: "",
-      };
-      const statusClass = statusClassMap[this._taskStatus] ?? "";
-      this._setStatus(this._taskStatus, statusClass);
+      actionIcon.textContent = "play_arrow";
+      actionText.textContent = "Start";
+      this.btnMain.classList.remove("bg-red-600", "hover:bg-red-700");
+      this.btnMain.classList.add("bg-slate-800", "hover:bg-slate-700");
+
+      // Disable if creds not configured or URL invalid
+      const shouldDisable = !credsOk || !this._validation.valid;
+      this.btnMain.disabled = shouldDisable;
     }
 
-    // 锁定时禁用 URL 输入
+    // Update delete button
+    this.btnDelete.disabled = isLocked;
+    this.btnDelete.title = isLocked ? "Cannot delete while task is running" : "Delete Row";
+
+    // Update paste button
+    this._updatePasteButton();
+
+    // Lock URL input
     if (this.urlInput) {
       this.urlInput.setDisabled(isLocked);
+    }
+
+    // Update reason
+    if (!isLocked) {
+      if (!credsOk) {
+        this._showReason("Credentials not configured. Please configure in Global Settings.");
+      } else if (!this._validation.valid) {
+        this._showReason(this._validation.error || "Invalid URL");
+      } else {
+        this._hideReason();
+      }
+    } else {
+      if (this._taskStatus === TaskStatus.QUEUED && this._queuedPosition) {
+        this._showReason(`Queued (#${this._queuedPosition})`);
+      } else if (this._taskStatus === TaskStatus.QUEUED) {
+        this._showReason("Queued");
+      } else {
+        this._hideReason();
+      }
     }
 
     if (this.statsComponent) this.statsComponent.refresh();
@@ -462,22 +596,25 @@ class AccountRow {
       try {
         return await res.text();
       } catch (e2) {
-        return "未知错误";
+        return "Unknown error";
       }
     }
   }
 
-  /**
-   * 清理资源
-   */
   destroy() {
     if (this._unsubscribeClipboard) {
       this._unsubscribeClipboard();
       this._unsubscribeClipboard = null;
     }
+    if (this.card && this.card.parentNode) {
+      this.card.parentNode.removeChild(this.card);
+    }
   }
 }
 
+/**
+ * AccountsPanel - Manages list of account rows
+ */
 class AccountsPanel {
   constructor(container, { getSettings }) {
     this.container = container;
@@ -488,22 +625,45 @@ class AccountsPanel {
   }
 
   _render() {
-    const toolbar = el("div", { class: "accounts-toolbar" });
-    const left = el("div", { class: "hint", text: "提示：这里只是最小 UI 骨架，用于验证全局设置联动。" });
-    const addBtn = el("button", { class: "btn", text: "Add Row", onclick: () => this.addRow() });
-    toolbar.appendChild(left);
-    toolbar.appendChild(addBtn);
-
-    this.list = el("div", { class: "accounts-list" });
-    this.container.appendChild(toolbar);
+    this.list = el("div", { class: "accounts-list space-y-3" });
     this.container.appendChild(this.list);
-
     this.addRow();
   }
 
   addRow() {
-    const row = new AccountRow(this.list, { getSettings: this.getSettings });
+    const row = new AccountRow(this.list, {
+      getSettings: this.getSettings,
+      onDelete: (rowToDelete) => this.deleteRow(rowToDelete),
+    });
     this.rows.push(row);
+    this._updateEmptyState();
+    return row;
+  }
+
+  deleteRow(row) {
+    const index = this.rows.indexOf(row);
+    if (index === -1) return;
+
+    this.rows.splice(index, 1);
+    row.destroy();
+
+    if (this.rows.length === 0) {
+      this.addRow();
+    }
+    this._updateEmptyState();
+  }
+
+  _updateEmptyState() {
+    const emptyState = document.getElementById("empty-state");
+    if (emptyState) {
+      if (this.rows.length === 0) {
+        emptyState.classList.remove("hidden");
+        emptyState.classList.add("flex");
+      } else {
+        emptyState.classList.add("hidden");
+        emptyState.classList.remove("flex");
+      }
+    }
   }
 
   refreshGating() {
@@ -534,11 +694,13 @@ class AccountsPanel {
       }
     };
 
-    // 轮询足够支撑本任务验收（SSE 将在后续任务完善）。
     setInterval(tick, 800);
   }
 }
 
+/**
+ * Main Application
+ */
 (async function main() {
   const settingsContainer = document.getElementById("global-settings");
   const accountsContainer = document.getElementById("accounts");
@@ -557,4 +719,32 @@ class AccountsPanel {
   await settingsPanel.load();
   settings = settingsPanel.getSettings();
   accountsPanel.refreshGating();
+
+  // Settings panel collapse/expand
+  const settingsSection = document.getElementById("global-settings-section");
+  const settingsToggleBtn = document.getElementById("settings-toggle");
+  const settingsCloseBtn = document.getElementById("settings-close");
+
+  function toggleSettings() {
+    const isCollapsed = settingsSection.classList.toggle("collapsed");
+    settingsToggleBtn.classList.toggle("active", !isCollapsed);
+  }
+
+  settingsToggleBtn.addEventListener("click", toggleSettings);
+  settingsCloseBtn.addEventListener("click", () => {
+    settingsSection.classList.add("collapsed");
+    settingsToggleBtn.classList.remove("active");
+  });
+
+  // Add Account button
+  const addRowBtn = document.getElementById("btn-add-row");
+  if (addRowBtn) {
+    addRowBtn.addEventListener("click", () => accountsPanel.addRow());
+  }
+
+  // Empty state add button
+  const addFirstBtn = document.getElementById("btn-add-first");
+  if (addFirstBtn) {
+    addFirstBtn.addEventListener("click", () => accountsPanel.addRow());
+  }
 })();

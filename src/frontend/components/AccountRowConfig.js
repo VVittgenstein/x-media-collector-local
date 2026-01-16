@@ -86,105 +86,79 @@ class AccountRowConfig {
   }
 
   _render() {
+    // Config panel content (toggle button is handled in app.js main row)
     this.container.innerHTML = `
-      <div class="account-config-wrapper">
-        <div class="config-header">
-          <button type="button" class="config-toggle-btn">
-            <span class="toggle-icon">▶</span>
-            <span class="toggle-text">筛选配置</span>
-          </button>
-          <div class="config-actions">
-            <button type="button" class="btn btn-sm config-copy-btn" title="复制配置">
-              <span class="btn-icon">📋</span> Copy
-            </button>
-            <button type="button" class="btn btn-sm config-paste-btn" title="粘贴配置">
-              <span class="btn-icon">📥</span> Paste
-            </button>
-          </div>
-        </div>
-        <div class="config-panel" style="display: none;">
-          <div class="config-section">
-            <div class="config-row">
-              <div class="config-field">
-                <label class="config-label">开始日期</label>
-                <input type="date" class="config-input config-start-date" />
-              </div>
-              <div class="config-field">
-                <label class="config-label">结束日期</label>
-                <input type="date" class="config-input config-end-date" />
-              </div>
+      <div class="account-config-wrapper p-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          <!-- Date Range -->
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Date Range</label>
+            <div class="flex items-center gap-2">
+              <input type="date" class="config-start-date w-full text-xs border border-slate-200 rounded px-2 py-1.5 focus:border-blue-500 outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400" />
+              <span class="text-slate-400 text-xs">to</span>
+              <input type="date" class="config-end-date w-full text-xs border border-slate-200 rounded px-2 py-1.5 focus:border-blue-500 outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400" />
             </div>
           </div>
 
-          <div class="config-section">
-            <label class="config-label">媒体类型</label>
-            <div class="config-radio-group">
-              <label class="config-radio">
-                <input type="radio" name="mediaType" value="images" />
-                <span>仅图片</span>
+          <!-- Media Types -->
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Media Type</label>
+            <div class="flex gap-2 flex-wrap">
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 has-[:checked]:text-blue-600">
+                <input type="radio" name="mediaType" value="images" class="accent-blue-600" /> Images
               </label>
-              <label class="config-radio">
-                <input type="radio" name="mediaType" value="videos" />
-                <span>仅视频</span>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 has-[:checked]:text-blue-600">
+                <input type="radio" name="mediaType" value="videos" class="accent-blue-600" /> Videos
               </label>
-              <label class="config-radio">
-                <input type="radio" name="mediaType" value="both" />
-                <span>全部</span>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400 has-[:checked]:text-blue-600">
+                <input type="radio" name="mediaType" value="both" class="accent-blue-600" /> All
               </label>
             </div>
           </div>
 
-          <div class="config-section">
-            <label class="config-label">来源类型</label>
-            <div class="config-checkbox-group">
-              <label class="config-checkbox">
-                <input type="checkbox" name="sourceType" value="Original" />
-                <span>原创</span>
+          <!-- Source Types -->
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Source Type</label>
+            <div class="flex gap-2 flex-wrap">
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                <input type="checkbox" name="sourceType" value="Original" class="accent-blue-600" /> Original
               </label>
-              <label class="config-checkbox">
-                <input type="checkbox" name="sourceType" value="Retweet" />
-                <span>转推</span>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                <input type="checkbox" name="sourceType" value="Retweet" class="accent-blue-600" /> Retweet
               </label>
-              <label class="config-checkbox">
-                <input type="checkbox" name="sourceType" value="Reply" />
-                <span>回复</span>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                <input type="checkbox" name="sourceType" value="Reply" class="accent-blue-600" /> Reply
               </label>
-              <label class="config-checkbox">
-                <input type="checkbox" name="sourceType" value="Quote" />
-                <span>引用</span>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded px-2 py-1.5 cursor-pointer hover:border-blue-400 select-none has-[:checked]:bg-blue-50 has-[:checked]:border-blue-400">
+                <input type="checkbox" name="sourceType" value="Quote" class="accent-blue-600" /> Quote
               </label>
             </div>
           </div>
 
-          <div class="config-section">
-            <div class="config-row">
-              <div class="config-field">
-                <label class="config-label">最小短边 (px)</label>
-                <input type="number" class="config-input config-min-short-side"
-                       min="0" step="1" placeholder="不限制" />
-                <div class="config-hint">低于此值的媒体不会下载</div>
+          <!-- Filters -->
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Filters</label>
+            <div class="space-y-2">
+              <div>
+                <label class="text-xs text-slate-600">Min Short Side (px)</label>
+                <input type="number" class="config-min-short-side w-full text-xs border border-slate-200 rounded px-2 py-1.5 focus:border-blue-500 outline-none bg-white disabled:bg-slate-50 disabled:text-slate-400 mt-1" min="0" step="1" placeholder="No limit" />
               </div>
-              <div class="config-field">
-                <label class="config-label config-switch-label">
-                  <span>Reply 中包含引用媒体</span>
-                  <input type="checkbox" class="config-switch-input config-include-quote" />
-                  <span class="config-switch"></span>
-                </label>
-                <div class="config-hint">开启后，Reply 推文会同时下载被引用推文的媒体</div>
-              </div>
+              <label class="flex items-center justify-between text-xs text-slate-600 cursor-pointer">
+                <span>Include quote media in replies</span>
+                <input type="checkbox" class="config-include-quote accent-blue-600" />
+              </label>
             </div>
           </div>
         </div>
       </div>
     `;
 
-    // 缓存 DOM 引用
+    // Cache DOM references
     this._wrapperEl = this.container.querySelector(".account-config-wrapper");
-    this._toggleBtn = this.container.querySelector(".config-toggle-btn");
-    this._toggleIcon = this.container.querySelector(".toggle-icon");
-    this._panelEl = this.container.querySelector(".config-panel");
-    this._copyBtn = this.container.querySelector(".config-copy-btn");
-    this._pasteBtn = this.container.querySelector(".config-paste-btn");
+    this._panelEl = this._wrapperEl; // The wrapper is the panel in this new design
+    this._copyBtn = null; // Copy/Paste handled in app.js now
+    this._pasteBtn = null;
 
     this._startDateInput = this.container.querySelector(".config-start-date");
     this._endDateInput = this.container.querySelector(".config-end-date");
@@ -200,7 +174,7 @@ class AccountRowConfig {
     this._includeQuoteCheckbox =
       this.container.querySelector(".config-include-quote");
 
-    // 为 radio 添加唯一 name（支持多行）
+    // Add unique name for radio buttons (support multiple rows)
     const uniqueId = Math.random().toString(36).substring(2, 9);
     this._mediaTypeRadios.forEach((radio) => {
       radio.name = `mediaType_${uniqueId}`;
@@ -211,42 +185,26 @@ class AccountRowConfig {
   }
 
   _bindEvents() {
-    // 展开/收起切换
-    this._toggleBtn.addEventListener("click", () => {
-      this._expanded = !this._expanded;
-      this._updateExpandState();
-    });
+    // Toggle/Copy/Paste buttons are now handled in app.js main row
 
-    // Copy 按钮
-    this._copyBtn.addEventListener("click", () => {
-      if (this.options.onCopy) {
-        this.options.onCopy(this.getConfig());
-      }
-    });
-
-    // Paste 按钮
-    this._pasteBtn.addEventListener("click", () => {
-      if (this._locked) return;
-      if (this.options.onPaste) {
-        this.options.onPaste();
-      }
-    });
-
-    // 日期输入
+    // Date inputs
     this._startDateInput.addEventListener("change", () => this._onInputChange());
     this._endDateInput.addEventListener("change", () => this._onInputChange());
+    // Some browsers don't trigger change before blur; add input event to ensure config is synced before Start
+    this._startDateInput.addEventListener("input", () => this._onInputChange());
+    this._endDateInput.addEventListener("input", () => this._onInputChange());
 
-    // 媒体类型
+    // Media type radios
     this._mediaTypeRadios.forEach((radio) => {
       radio.addEventListener("change", () => this._onInputChange());
     });
 
-    // 来源类型
+    // Source type checkboxes
     this._sourceTypeCheckboxes.forEach((checkbox) => {
       checkbox.addEventListener("change", () => this._onInputChange());
     });
 
-    // 最小短边
+    // Min short side input
     this._minShortSideInput.addEventListener("change", () =>
       this._onInputChange()
     );
@@ -254,7 +212,7 @@ class AccountRowConfig {
       this._onInputChange()
     );
 
-    // Quote 开关
+    // Include quote checkbox
     this._includeQuoteCheckbox.addEventListener("change", () =>
       this._onInputChange()
     );
@@ -318,50 +276,25 @@ class AccountRowConfig {
   }
 
   _updateExpandState() {
-    this._panelEl.style.display = this._expanded ? "block" : "none";
-    this._toggleIcon.textContent = this._expanded ? "▼" : "▶";
-    this._wrapperEl.classList.toggle("expanded", this._expanded);
+    // Expand/collapse is handled by parent (app.js) via classList.toggle("hidden")
+    // This method kept for API compatibility
   }
 
   _updateLockedState() {
-    this._wrapperEl.classList.toggle("locked", this._locked);
-
-    // 禁用所有输入
-    const inputs = this._panelEl.querySelectorAll("input");
+    // Disable all inputs when locked
+    const inputs = this._wrapperEl.querySelectorAll("input");
     inputs.forEach((input) => {
       input.disabled = this._locked;
     });
 
-    // Paste 按钮
-    this._pasteBtn.disabled = this._locked;
-    if (this._locked) {
-      this._pasteBtn.title = "任务进行中，无法粘贴配置";
-    } else {
-      this._pasteBtn.title = "粘贴配置";
-    }
-
-    // Copy 保持可用
-    this._copyBtn.disabled = false;
-
-    // 更新 Paste 按钮可用性（检查剪贴板是否有内容）
-    this._updatePasteAvailability();
+    // Add visual locked state with opacity
+    this._wrapperEl.classList.toggle("opacity-50", this._locked);
+    this._wrapperEl.classList.toggle("pointer-events-none", this._locked);
   }
 
   _updatePasteAvailability() {
-    if (this._locked) {
-      this._pasteBtn.disabled = true;
-      return;
-    }
-
-    if (this.options.canPaste) {
-      const canPaste = this.options.canPaste();
-      this._pasteBtn.disabled = !canPaste;
-      if (!canPaste) {
-        this._pasteBtn.title = "剪贴板为空";
-      } else {
-        this._pasteBtn.title = "粘贴配置";
-      }
-    }
+    // Copy/Paste buttons are now handled in app.js
+    // This method kept for API compatibility
   }
 
   /**
@@ -369,6 +302,8 @@ class AccountRowConfig {
    * @returns {AccountConfig}
    */
   getConfig() {
+    // 兜底：确保在用户刚输入但尚未触发 change 的情况下（例如直接点击 Start），仍能拿到最新配置。
+    this._readConfigFromUI();
     return cloneConfig(this._config);
   }
 

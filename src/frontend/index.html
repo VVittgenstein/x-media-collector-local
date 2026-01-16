@@ -1,41 +1,89 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>x-media-collector-local</title>
-    <link rel="stylesheet" href="./app.css" />
-    <link rel="stylesheet" href="./components/AccountRowUrlInput.css" />
-    <link rel="stylesheet" href="./components/AccountRowConfig.css" />
-    <link rel="stylesheet" href="./components/AccountRowStats.css" />
-    <link rel="stylesheet" href="./settings/GlobalSettings.css" />
-  </head>
-  <body>
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">
-          <div class="brand-title">x-media-collector-local</div>
-          <div class="brand-subtitle">本地部署 WebUI（MVP）</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-Media Scraper</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet"/>
+    <!-- App CSS (minimal) -->
+    <link rel="stylesheet" href="./app.css">
+</head>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800 bg-slate-50">
+
+    <!-- HEADER -->
+    <header class="bg-white border-b border-slate-200 shadow-sm z-20 shrink-0">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-1.5 rounded-lg">
+                    <span class="material-symbols-outlined text-2xl">download</span>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight">X-Media <span class="text-blue-600">Scraper</span></h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="settings-toggle" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-md transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                    <span>Global Settings</span>
+                </button>
+            </div>
         </div>
-        <div class="topbar-right">
-          <a class="link" href="https://x.com" target="_blank" rel="noreferrer">x.com</a>
-        </div>
-      </div>
     </header>
 
-    <main class="page">
-      <section class="panel" aria-label="Global Settings">
-        <div class="panel-title">Global Settings</div>
-        <div id="global-settings"></div>
-      </section>
+    <!-- GLOBAL SETTINGS PANEL (Collapsible) -->
+    <section id="global-settings-section" class="collapsible bg-white border-b border-slate-200 shadow-sm z-10 collapsed">
+        <div class="collapsible-inner px-6 pt-4 max-h-[60vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4 sticky top-0 bg-white pb-2 -mt-4 pt-4 -mx-6 px-6 border-b border-slate-100">
+                <h3 class="text-sm font-semibold text-slate-700">Global Settings</h3>
+                <button id="settings-close" class="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+            </div>
+            <div id="global-settings">
+                <!-- GlobalSettings component will render here -->
+            </div>
+        </div>
+    </section>
 
-      <section class="panel" aria-label="Accounts">
-        <div class="panel-title">Accounts</div>
-        <div class="panel-subtitle">Start/Continue 在未配置凭证时会被阻止。</div>
-        <div id="accounts"></div>
-      </section>
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2"></div>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 overflow-y-auto p-4">
+        <div class="max-w-7xl mx-auto space-y-4">
+            <!-- Toolbar -->
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-slate-500 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Tasks Queue
+                </h2>
+                <button id="btn-add-row" class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-500 transition shadow-md hover:shadow-lg hover:shadow-blue-500/20">
+                    <span class="material-symbols-outlined text-[18px]">add</span>
+                    Add Account
+                </button>
+            </div>
+
+            <!-- Task List Container -->
+            <div id="accounts" class="space-y-3">
+                <!-- Account rows will be injected here via JS -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-slate-400 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+                <span class="material-symbols-outlined text-5xl mb-3 text-slate-300">playlist_add</span>
+                <p class="text-sm">No accounts added yet.</p>
+                <button id="btn-add-first" class="mt-4 text-blue-600 hover:underline text-sm font-medium">Add your first account</button>
+            </div>
+        </div>
     </main>
 
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 p-3 shrink-0 text-center">
+        <p class="text-[10px] text-slate-400">
+            Local Deployment &bull; v1.1.0 &bull; <span class="text-slate-500">Use responsibly. Do not use main account credentials.</span>
+        </p>
+    </footer>
+
+    <!-- Scripts -->
     <script src="./components/AccountRowUrlInput.js"></script>
     <script src="./components/AccountRowConfig.js"></script>
     <script src="./components/AccountRowStats.js"></script>
@@ -43,5 +91,5 @@
     <script src="./state/ConfigClipboard.js"></script>
     <script src="./settings/GlobalSettings.js"></script>
     <script src="./app.js"></script>
-  </body>
+</body>
 </html>

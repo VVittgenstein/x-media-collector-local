@@ -1,4 +1,4 @@
-/* global fetch */
+/* global fetch, showToast */
 
 class GlobalSettingsPanel {
   constructor(container, { onChange } = {}) {
@@ -16,7 +16,7 @@ class GlobalSettingsPanel {
     try {
       const res = await fetch("/api/settings");
       if (!res.ok) {
-        this._setBanner("error", `无法加载设置（HTTP ${res.status}）`);
+        this._setBanner("error", `Failed to load settings (HTTP ${res.status})`);
         this._render();
         return;
       }
@@ -24,7 +24,7 @@ class GlobalSettingsPanel {
       this._applySettings(data);
     } catch (err) {
       const message = err?.message ? String(err.message) : String(err);
-      this._setBanner("error", `无法加载设置（${message}）`);
+      this._setBanner("error", `Failed to load settings: ${message}`);
       this._render();
     }
   }
@@ -37,19 +37,21 @@ class GlobalSettingsPanel {
 
   _renderSkeleton() {
     this.container.innerHTML = `
-      <div class="settings-grid">
-        <div class="settings-block" data-block="credentials"></div>
-        <div class="settings-block" data-block="downloadRoot"></div>
-        <div class="settings-block" data-block="maxConcurrent"></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white border border-slate-200 rounded-xl p-4" data-block="credentials"></div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4" data-block="downloadRoot"></div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4" data-block="maxConcurrent"></div>
       </div>
-      <div class="divider"></div>
-      <div class="settings-section-title">Rate Limiting &amp; Proxy</div>
-      <div class="settings-grid">
-        <div class="settings-block" data-block="throttle"></div>
-        <div class="settings-block" data-block="retry"></div>
-        <div class="settings-block" data-block="proxy"></div>
+      <div class="border-t border-slate-200 my-6"></div>
+      <h3 class="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
+        <span class="material-symbols-outlined text-lg text-slate-400">speed</span>
+        Rate Limiting &amp; Proxy
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div class="bg-white border border-slate-200 rounded-xl p-4" data-block="throttle"></div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4" data-block="retry"></div>
+        <div class="bg-white border border-slate-200 rounded-xl p-4" data-block="proxy"></div>
       </div>
-      <div class="divider"></div>
       <div data-el="banner"></div>
     `;
     this.bannerEl = this.container.querySelector('[data-el="banner"]');
@@ -85,21 +87,31 @@ class GlobalSettingsPanel {
 
     if (configured) {
       this.credentialsEl.innerHTML = `
-        <div class="settings-block-title">Credentials</div>
-        <div class="status-line">
-          <div class="kv"><b>状态</b>：<span class="ok">已设置</span>（UI 不回显明文）</div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="material-symbols-outlined text-lg text-emerald-500">verified_user</span>
+          <h4 class="text-sm font-bold text-slate-700">Credentials</h4>
+          <span class="ml-auto px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">Configured</span>
         </div>
-        <div class="status-line">
-          <div class="kv"><b>auth_token</b>：${status.auth_token_set ? "已设置" : "未设置"}</div>
-          <div class="kv"><b>ct0</b>：${status.ct0_set ? "已设置" : "未设置"}</div>
-          <div class="kv"><b>twid</b>：${status.twid_set ? "已设置" : "未设置"}</div>
+        <div class="space-y-1 text-xs text-slate-600 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm ${status.auth_token_set ? "text-emerald-500" : "text-slate-300"}">check_circle</span>
+            <span>auth_token</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm ${status.ct0_set ? "text-emerald-500" : "text-slate-300"}">check_circle</span>
+            <span>ct0</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm ${status.twid_set ? "text-emerald-500" : "text-slate-300"}">check_circle</span>
+            <span>twid</span>
+          </div>
         </div>
-        <div class="actions">
-          <button class="btn btn-danger" data-action="clearCreds">清除并重新输入</button>
-        </div>
-        <div class="help">
-          凭证会保存在本地 <code>data/config.json</code>（不加密）。请注意保管，且不要分享该文件。
-        </div>
+        <button class="w-full px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition" data-action="clearCreds">
+          Clear &amp; Re-enter
+        </button>
+        <p class="mt-3 text-[10px] text-slate-400">
+          Stored in <code class="bg-slate-100 px-1 rounded">data/config.json</code> (unencrypted).
+        </p>
       `;
       this.credentialsEl.querySelector('[data-action="clearCreds"]').addEventListener("click", () => {
         this._clearCredentials();
@@ -108,34 +120,31 @@ class GlobalSettingsPanel {
     }
 
     this.credentialsEl.innerHTML = `
-      <div class="settings-block-title">Credentials</div>
-      <div class="form-row">
-        <div class="label">auth_token *</div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-lg text-amber-500">key</span>
+        <h4 class="text-sm font-bold text-slate-700">Credentials</h4>
+        <span class="ml-auto px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-medium rounded-full">Required</span>
+      </div>
+      <div class="space-y-3">
         <div>
-          <input class="input" type="password" autocomplete="off" spellcheck="false" data-el="authToken" placeholder="来自 Cookie: auth_token" />
-          <div class="help">必填：来自浏览器 Cookie <code>auth_token</code>。</div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">auth_token *</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="password" autocomplete="off" spellcheck="false" data-el="authToken" placeholder="From Cookie: auth_token" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">ct0 *</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="password" autocomplete="off" spellcheck="false" data-el="ct0" placeholder="From Cookie: ct0" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">twid (optional)</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="password" autocomplete="off" spellcheck="false" data-el="twid" placeholder="From Cookie: twid" />
         </div>
       </div>
-      <div class="form-row">
-        <div class="label">ct0 *</div>
-        <div>
-          <input class="input" type="password" autocomplete="off" spellcheck="false" data-el="ct0" placeholder="来自 Cookie: ct0" />
-          <div class="help">必填：来自浏览器 Cookie <code>ct0</code>（CSRF token）。</div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="label">twid</div>
-        <div>
-          <input class="input" type="password" autocomplete="off" spellcheck="false" data-el="twid" placeholder="可选：来自 Cookie: twid" />
-          <div class="help">可选：用于调试（非必需）。</div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" data-action="saveCreds">保存</button>
-      </div>
-      <div class="help">
-        如何获取：登录 <code>x.com</code> → 按 <code>F12</code> → Application → Cookies → <code>x.com</code> → 找到 <code>auth_token</code>/<code>ct0</code>。
-      </div>
+      <button class="w-full mt-4 px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition" data-action="saveCreds">
+        Save Credentials
+      </button>
+      <p class="mt-3 text-[10px] text-slate-400">
+        Get from: x.com &rarr; F12 &rarr; Application &rarr; Cookies &rarr; x.com
+      </p>
     `;
 
     this.credentialsEl.querySelector('[data-action="saveCreds"]').addEventListener("click", () => {
@@ -145,17 +154,22 @@ class GlobalSettingsPanel {
 
   _renderDownloadRoot(settings) {
     this.downloadRootEl.innerHTML = `
-      <div class="settings-block-title">Download Root</div>
-      <div class="form-row">
-        <div class="label">Path</div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-lg text-blue-500">folder</span>
+        <h4 class="text-sm font-bold text-slate-700">Download Root</h4>
+      </div>
+      <div class="space-y-3">
         <div>
-          <input class="input" type="text" autocomplete="off" spellcheck="false" data-el="downloadRoot" />
-          <div class="help">所有账号输出都会落在该目录下：<code>&lt;root&gt;/&lt;handle&gt;/{images|videos}/</code></div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Path</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="text" autocomplete="off" spellcheck="false" data-el="downloadRoot" />
         </div>
       </div>
-      <div class="actions">
-        <button class="btn" data-action="saveRoot">保存</button>
-      </div>
+      <button class="w-full mt-4 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition" data-action="saveRoot">
+        Save
+      </button>
+      <p class="mt-3 text-[10px] text-slate-400">
+        Output: <code class="bg-slate-100 px-1 rounded">&lt;root&gt;/&lt;handle&gt;/{images|videos}/</code>
+      </p>
     `;
     const input = this.downloadRootEl.querySelector('[data-el="downloadRoot"]');
     input.value = settings.download_root || "";
@@ -166,17 +180,22 @@ class GlobalSettingsPanel {
 
   _renderMaxConcurrent(settings) {
     this.maxConcurrentEl.innerHTML = `
-      <div class="settings-block-title">Max Concurrent</div>
-      <div class="form-row">
-        <div class="label">Value</div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-lg text-purple-500">stacks</span>
+        <h4 class="text-sm font-bold text-slate-700">Max Concurrent</h4>
+      </div>
+      <div class="space-y-3">
         <div>
-          <input class="input" type="number" min="1" max="100" step="1" data-el="maxConcurrent" />
-          <div class="help">默认 3；修改后立即影响调度器的并发上限（MVP）。</div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Value</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="number" min="1" max="100" step="1" data-el="maxConcurrent" />
         </div>
       </div>
-      <div class="actions">
-        <button class="btn" data-action="saveMax">保存</button>
-      </div>
+      <button class="w-full mt-4 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition" data-action="saveMax">
+        Save
+      </button>
+      <p class="mt-3 text-[10px] text-slate-400">
+        Default: 3. Changes apply immediately to scheduler.
+      </p>
     `;
     const input = this.maxConcurrentEl.querySelector('[data-el="maxConcurrent"]');
     input.value = String(settings.max_concurrent ?? 3);
@@ -188,34 +207,30 @@ class GlobalSettingsPanel {
   _renderThrottle(settings) {
     const t = settings.throttle || { min_interval_s: 1.5, jitter_max_s: 1.0, enabled: true };
     this.throttleEl.innerHTML = `
-      <div class="settings-block-title">Throttle (Request Spacing)</div>
-      <div class="form-row">
-        <div class="label">Enabled</div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-lg text-orange-500">timer</span>
+        <h4 class="text-sm font-bold text-slate-700">Throttle</h4>
+      </div>
+      <div class="space-y-3">
+        <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+          <input type="checkbox" class="accent-blue-600" data-el="throttleEnabled" ${t.enabled ? "checked" : ""} />
+          <span>Enable request throttling</span>
+        </label>
         <div>
-          <label class="checkbox-label">
-            <input type="checkbox" data-el="throttleEnabled" ${t.enabled ? "checked" : ""} />
-            <span>Enable request throttling</span>
-          </label>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Min Interval (s)</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="number" min="0" max="60" step="0.1" data-el="minInterval" value="${t.min_interval_s}" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Jitter Max (s)</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="number" min="0" max="30" step="0.1" data-el="jitterMax" value="${t.jitter_max_s}" />
         </div>
       </div>
-      <div class="form-row">
-        <div class="label">Min Interval (s)</div>
-        <div>
-          <input class="input" type="number" min="0" max="60" step="0.1" data-el="minInterval" value="${t.min_interval_s}" />
-          <div class="help">Minimum seconds between requests (default: 1.5s)</div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="label">Jitter Max (s)</div>
-        <div>
-          <input class="input" type="number" min="0" max="30" step="0.1" data-el="jitterMax" value="${t.jitter_max_s}" />
-          <div class="help">Random delay added to min interval (default: 1.0s)</div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn" data-action="saveThrottle">保存</button>
-      </div>
-      <div class="help">Conservative defaults to avoid rate limiting. Adjust based on your experience.</div>
+      <button class="w-full mt-4 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition" data-action="saveThrottle">
+        Save
+      </button>
+      <p class="mt-3 text-[10px] text-slate-400">
+        Conservative defaults to avoid rate limiting.
+      </p>
     `;
     this.throttleEl.querySelector('[data-action="saveThrottle"]').addEventListener("click", () => {
       this._saveThrottle();
@@ -225,41 +240,34 @@ class GlobalSettingsPanel {
   _renderRetry(settings) {
     const r = settings.retry || { max_retries: 3, base_delay_s: 2.0, max_delay_s: 60.0, enabled: true };
     this.retryEl.innerHTML = `
-      <div class="settings-block-title">Retry (Exponential Backoff)</div>
-      <div class="form-row">
-        <div class="label">Enabled</div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-lg text-teal-500">replay</span>
+        <h4 class="text-sm font-bold text-slate-700">Retry</h4>
+      </div>
+      <div class="space-y-3">
+        <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+          <input type="checkbox" class="accent-blue-600" data-el="retryEnabled" ${r.enabled ? "checked" : ""} />
+          <span>Enable retry on 429/5xx errors</span>
+        </label>
         <div>
-          <label class="checkbox-label">
-            <input type="checkbox" data-el="retryEnabled" ${r.enabled ? "checked" : ""} />
-            <span>Enable retry on 429/5xx errors</span>
-          </label>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Max Retries</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="number" min="0" max="10" step="1" data-el="maxRetries" value="${r.max_retries}" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Base Delay (s)</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="number" min="0.1" max="60" step="0.1" data-el="baseDelay" value="${r.base_delay_s}" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Max Delay (s)</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="number" min="1" max="300" step="1" data-el="maxDelay" value="${r.max_delay_s}" />
         </div>
       </div>
-      <div class="form-row">
-        <div class="label">Max Retries</div>
-        <div>
-          <input class="input" type="number" min="0" max="10" step="1" data-el="maxRetries" value="${r.max_retries}" />
-          <div class="help">Maximum retry attempts (default: 3)</div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="label">Base Delay (s)</div>
-        <div>
-          <input class="input" type="number" min="0.1" max="60" step="0.1" data-el="baseDelay" value="${r.base_delay_s}" />
-          <div class="help">Initial delay before first retry (default: 2.0s)</div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="label">Max Delay (s)</div>
-        <div>
-          <input class="input" type="number" min="1" max="300" step="1" data-el="maxDelay" value="${r.max_delay_s}" />
-          <div class="help">Maximum delay cap (default: 60s)</div>
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn" data-action="saveRetry">保存</button>
-      </div>
-      <div class="help">Exponential backoff: delay doubles each retry up to max delay.</div>
+      <button class="w-full mt-4 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition" data-action="saveRetry">
+        Save
+      </button>
+      <p class="mt-3 text-[10px] text-slate-400">
+        Exponential backoff: delay doubles each retry.
+      </p>
     `;
     this.retryEl.querySelector('[data-action="saveRetry"]').addEventListener("click", () => {
       this._saveRetry();
@@ -269,31 +277,32 @@ class GlobalSettingsPanel {
   _renderProxy(settings) {
     const p = settings.proxy || { enabled: false, url_configured: false };
     this.proxyEl.innerHTML = `
-      <div class="settings-block-title">Proxy (Optional)</div>
-      <div class="form-row">
-        <div class="label">Enabled</div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="material-symbols-outlined text-lg text-indigo-500">vpn_key</span>
+        <h4 class="text-sm font-bold text-slate-700">Proxy</h4>
+        ${p.url_configured ? '<span class="ml-auto px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">Configured</span>' : '<span class="ml-auto px-2 py-0.5 bg-slate-100 text-slate-500 text-xs font-medium rounded-full">Optional</span>'}
+      </div>
+      <div class="space-y-3">
+        <label class="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+          <input type="checkbox" class="accent-blue-600" data-el="proxyEnabled" ${p.enabled ? "checked" : ""} />
+          <span>Route requests through proxy</span>
+        </label>
         <div>
-          <label class="checkbox-label">
-            <input type="checkbox" data-el="proxyEnabled" ${p.enabled ? "checked" : ""} />
-            <span>Route requests through proxy</span>
-          </label>
+          <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Proxy URL</label>
+          <input class="w-full text-xs border border-slate-200 rounded-lg px-3 py-2 font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" type="text" autocomplete="off" spellcheck="false" data-el="proxyUrl" placeholder="http://host:port or socks5://host:port" />
         </div>
       </div>
-      <div class="form-row">
-        <div class="label">Proxy URL</div>
-        <div>
-          <input class="input" type="text" autocomplete="off" spellcheck="false" data-el="proxyUrl" placeholder="http://host:port or socks5://host:port" />
-          <div class="help">
-            ${p.url_configured ? '<span class="ok">Proxy URL configured</span>' : '<span class="muted">Not configured</span>'}
-            (supports http, https, socks4, socks5)
-          </div>
-        </div>
+      <div class="flex gap-2 mt-4">
+        <button class="flex-1 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition" data-action="saveProxy">
+          Save
+        </button>
+        <button class="px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition" data-action="clearProxy">
+          Clear
+        </button>
       </div>
-      <div class="actions">
-        <button class="btn" data-action="saveProxy">保存</button>
-        <button class="btn btn-danger" data-action="clearProxy">清除</button>
-      </div>
-      <div class="help">Use proxy to avoid rate limiting or access restrictions. URL not shown after saving.</div>
+      <p class="mt-3 text-[10px] text-slate-400">
+        Supports http, https, socks4, socks5. URL hidden after saving.
+      </p>
     `;
     this.proxyEl.querySelector('[data-action="saveProxy"]').addEventListener("click", () => {
       this._saveProxy();
@@ -308,8 +317,28 @@ class GlobalSettingsPanel {
       this.bannerEl.innerHTML = "";
       return;
     }
-    const className = kind === "ok" ? "ok" : kind === "error" ? "error" : "muted";
-    this.bannerEl.innerHTML = `<div class="${className}">${message}</div>`;
+    if (kind === "ok") {
+      this.bannerEl.innerHTML = `
+        <div class="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-700">
+          <span class="material-symbols-outlined text-lg">check_circle</span>
+          <span>${message}</span>
+        </div>
+      `;
+    } else if (kind === "error") {
+      this.bannerEl.innerHTML = `
+        <div class="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <span class="material-symbols-outlined text-lg">error</span>
+          <span>${message}</span>
+        </div>
+      `;
+    } else {
+      this.bannerEl.innerHTML = `
+        <div class="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
+          <span class="material-symbols-outlined text-lg">info</span>
+          <span>${message}</span>
+        </div>
+      `;
+    }
   }
 
   async _saveCredentials() {

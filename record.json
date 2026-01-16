@@ -1067,6 +1067,110 @@
         "ops"
       ],
       "completion_notes": "创建了两个脚本：1) start.bat - 一键启动脚本，检查 Python、创建虚拟环境、安装依赖、启动 uvicorn 服务、自动打开浏览器；2) build_release.bat - 发布包打包脚本，复制必要文件到临时目录、清理缓存、使用 PowerShell 打包成带日期的 zip 文件。"
+    },
+
+    "T-20260114-ui-refactor-collapsible-settings-delete-row-light-theme": {
+      "order": "23/23",
+      "seed_id": "",
+      "title": "UI 重构：可折叠设置面板、删除行功能、浅色主题",
+      "type": "build",
+      "summary": "重构前端 UI：1) Global Settings 改为可折叠面板，通过顶部导航栏按钮控制展开/收起；2) 为每个账号行添加删除按钮，任务运行中禁止删除，删除最后一行时自动创建空行；3) 将深色主题切换为浅色主题以提升可读性。",
+      "acceptance_draft": [
+        "顶部导航栏有设置按钮，点击可展开/收起 Global Settings 面板",
+        "Global Settings 面板默认收起",
+        "每个账号行有删除按钮，点击可删除该行",
+        "任务处于 QUEUED/RUNNING 状态时删除按钮禁用",
+        "删除最后一行后自动创建新的空行",
+        "UI 采用浅色主题，文字清晰可读"
+      ],
+      "lane": "now",
+      "priority_suggested": "P1",
+      "status": "done",
+      "dependencies": [
+        "T-20260114-build-startup-and-release-scripts"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 4,
+      "interfaces_touched": [
+        "frontend/settings",
+        "frontend/account-row",
+        "frontend/theme"
+      ],
+      "artifacts": [
+        "src/frontend/index.html",
+        "src/frontend/app.js",
+        "src/frontend/app.css",
+        "src/frontend/settings/GlobalSettings.css",
+        "src/frontend/components/AccountRowConfig.css",
+        "src/frontend/components/AccountRowStats.css",
+        "src/frontend/components/AccountRowUrlInput.css"
+      ],
+      "citations": [],
+      "created_at": "2026-01-14T14:00:00Z",
+      "updated_at": "2026-01-14T15:00:00Z",
+      "owner": "claude",
+      "tags": [
+        "ui",
+        "refactor"
+      ],
+      "completion_notes": "完成 UI 重构：1) 在顶部导航栏添加 Settings 按钮，点击展开/收起 Global Settings 面板（默认收起），使用 max-height 过渡动画实现平滑折叠效果；2) 为每个账号行添加 Delete 按钮，任务运行/排队中禁用删除，删除最后一行时自动创建新空行，通过 AccountRow.destroy() 方法清理 DOM 和订阅；3) 将深色主题切换为浅色主题，更新 app.css 的 CSS 变量、body 背景、topbar、按钮、面板、状态标签、模态框等样式，同时更新所有组件 CSS 文件适配浅色主题。"
+    },
+
+    "T-20260116-ui-redesign-tailwind-material": {
+      "order": "24/24",
+      "seed_id": "",
+      "title": "UI 完全重制：Tailwind CSS + Material Symbols + 新布局",
+      "type": "build",
+      "summary": "按照新设计稿完全重制前端 UI：引入 Tailwind CSS（CDN）和 Google Material Symbols；重新设计 Header、Settings Panel、Tasks Queue 区域；将 Account Row 改为横向紧凑布局（URL + 状态标签 + 配置摘要 + 内联统计 + 操作按钮）；保留所有现有后端 API 集成。",
+      "acceptance_draft": [
+        "引入 Tailwind CSS CDN 和 Google Material Symbols 字体",
+        "Header 显示 X-Media Scraper 品牌标识 + Global Settings 按钮",
+        "Settings Panel 可折叠，包含凭证、存储路径、并发数等配置",
+        "Tasks Queue 区域显示 Add Account 按钮（无全局 Paste Config）",
+        "Account Row 横向布局：URL 输入框（带 @ 图标）+ 状态标签 + 配置切换按钮 + 配置摘要 + 操作按钮（folder/copy/paste/Start-Stop/delete）",
+        "每行独立的 Copy/Paste 按钮：Copy 存入全局剪贴板，Paste 从剪贴板应用到当前行（锁定时禁用 Paste）",
+        "所有现有后端 API 集成保持不变（scheduler、lifecycle、settings、os）",
+        "删除不再需要的 CSS 文件（迁移至 Tailwind 类）"
+      ],
+      "lane": "now",
+      "priority_suggested": "P1",
+      "status": "done",
+      "dependencies": [
+        "T-20260114-ui-refactor-collapsible-settings-delete-row-light-theme"
+      ],
+      "blocked": false,
+      "blocked_by": [],
+      "unblock_plan": "",
+      "estimate_h": 8,
+      "interfaces_touched": [
+        "frontend/index.html",
+        "frontend/app.js",
+        "frontend/app.css",
+        "frontend/components/*",
+        "frontend/settings/*"
+      ],
+      "artifacts": [
+        "src/frontend/index.html",
+        "src/frontend/app.js",
+        "src/frontend/app.css",
+        "src/frontend/components/AccountRowUrlInput.js",
+        "src/frontend/components/AccountRowConfig.js",
+        "src/frontend/components/AccountRowStats.js",
+        "src/frontend/components/ConfirmModals.js",
+        "src/frontend/settings/GlobalSettings.js"
+      ],
+      "citations": [],
+      "created_at": "2026-01-16T10:00:00Z",
+      "updated_at": "2026-01-16T15:30:00Z",
+      "owner": "claude",
+      "tags": [
+        "ui",
+        "redesign",
+        "tailwind"
+      ],
+      "completion_notes": "完成 UI 完全重制：1) index.html 引入 Tailwind CSS CDN 和 Google Material Symbols；2) app.css 精简为动画和状态样式；3) app.js 重写 AccountRow 为横向布局（URL + @ 图标、状态标签、配置切换 + 摘要、操作按钮）；4) 每行独立 Copy/Paste 按钮，Paste 锁定时禁用；5) AccountRowUrlInput.js 添加 @ 图标和 Tailwind 样式；6) AccountRowConfig.js 使用 Tailwind grid 布局；7) AccountRowStats.js 简化为仅处理打开文件夹 API；8) ConfirmModals.js 使用 Tailwind 样式卡片；9) GlobalSettings.js 使用 Tailwind 卡片布局和 Material 图标；10) 删除 4 个不再需要的 CSS 文件（AccountRowUrlInput.css、AccountRowConfig.css、AccountRowStats.css、GlobalSettings.css）。所有后端 API 集成保持不变。"
     }
   },
   "questions_for_human": [],

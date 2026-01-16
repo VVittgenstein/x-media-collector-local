@@ -236,18 +236,21 @@ class AccountRowUrlInput {
   _render() {
     this.container.innerHTML = `
       <div class="account-url-input-wrapper">
-        <div class="input-row">
+        <div class="relative flex items-center">
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <span class="material-symbols-outlined text-slate-400 text-[18px]">alternate_email</span>
+          </div>
           <input
             type="text"
-            class="url-input"
+            class="url-input w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm font-mono text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition placeholder:text-slate-300 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
             placeholder="https://x.com/username"
             autocomplete="off"
             spellcheck="false"
             ${this._disabled ? "disabled" : ""}
           />
-          <span class="handle-display"></span>
+          <span class="handle-display hidden absolute right-2 px-2 py-0.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-full border border-emerald-200"></span>
         </div>
-        <div class="error-message"></div>
+        <div class="error-message hidden mt-1 text-xs text-red-500"></div>
       </div>
     `;
 
@@ -288,26 +291,32 @@ class AccountRowUrlInput {
   }
 
   _updateUI(result) {
-    // 更新样式
-    this._wrapperEl.classList.toggle("valid", result.valid);
-    this._wrapperEl.classList.toggle("invalid", !result.valid && this._inputEl.value.trim() !== "");
+    const hasInput = this._inputEl.value.trim() !== "";
 
-    // 更新 handle 展示
-    if (result.valid && result.handle) {
-      this._handleDisplayEl.textContent = `@${result.handle}`;
-      this._handleDisplayEl.style.display = "inline";
-    } else {
-      this._handleDisplayEl.textContent = "";
-      this._handleDisplayEl.style.display = "none";
+    // Update input border color based on validation
+    this._inputEl.classList.remove("border-emerald-500", "border-red-400");
+    if (result.valid) {
+      this._inputEl.classList.add("border-emerald-500");
+    } else if (hasInput) {
+      this._inputEl.classList.add("border-red-400");
     }
 
-    // 更新错误信息
-    if (!result.valid && result.error && this._inputEl.value.trim() !== "") {
+    // Update handle badge display
+    if (result.valid && result.handle) {
+      this._handleDisplayEl.textContent = `@${result.handle}`;
+      this._handleDisplayEl.classList.remove("hidden");
+    } else {
+      this._handleDisplayEl.textContent = "";
+      this._handleDisplayEl.classList.add("hidden");
+    }
+
+    // Update error message
+    if (!result.valid && result.error && hasInput) {
       this._errorEl.textContent = result.error;
-      this._errorEl.style.display = "block";
+      this._errorEl.classList.remove("hidden");
     } else {
       this._errorEl.textContent = "";
-      this._errorEl.style.display = "none";
+      this._errorEl.classList.add("hidden");
     }
   }
 
@@ -359,7 +368,7 @@ class AccountRowUrlInput {
   setDisabled(disabled) {
     this._disabled = disabled;
     this._inputEl.disabled = disabled;
-    this._wrapperEl.classList.toggle("disabled", disabled);
+    // Tailwind handles disabled styling via disabled: pseudo-class
   }
 
   /**
