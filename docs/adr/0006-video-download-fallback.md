@@ -9,7 +9,7 @@
 
 ### 视频字段形态分析
 
-基于 `artifacts/samples/x_timeline_user_media_sample.json` 样本，视频媒体结构如下：
+基于公开测试 fixture 与脱敏样本验证，视频媒体结构如下：
 
 ```json
 {

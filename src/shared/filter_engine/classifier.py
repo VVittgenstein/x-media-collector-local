@@ -1,7 +1,7 @@
 """
 推文来源类型分类（纯逻辑）。
 
-规则（来自 read_only.md / EVID-001）：
+规则：
 - 只要是 Reply 就归 Reply（即使同时 Quote）
 - Quote 仅指：非 Reply 且存在引用关系的推文
 """

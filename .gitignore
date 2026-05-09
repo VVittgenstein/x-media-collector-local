@@ -8,6 +8,15 @@ accounts.db
 artifacts/spike_downloads/
 artifacts/samples/run_*.json
 artifacts/samples/run_*.jsonl
+artifacts/samples/
+
+# Local project-management / agent artifacts
+.codex/
+Compact/
+x_dr/
+record.json
+read_only.md
+scripts/spike_scrape_sample.py
 
 # Python caches
 __pycache__/

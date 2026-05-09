@@ -16,7 +16,7 @@
 
 ## 事实 / Evidence（基于 Spike JSON 样本）
 
-基于 `artifacts/samples/x_timeline_user_media_sample.json`：
+基于公开测试 fixture 与脱敏样本验证：
 
 ### 图片（photo）
 
